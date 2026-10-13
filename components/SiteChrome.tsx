@@ -6,13 +6,13 @@ export default function SiteChrome({ slug }: { slug: string }) {
     <div className="fixed bottom-4 left-1/2 z-[100] flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/15 bg-black/70 p-1 text-xs font-medium text-white shadow-xl backdrop-blur-md">
       <Link
         href="/"
-        className="rounded-full px-3 py-1.5 transition-colors hover:bg-white/10"
+        className="whitespace-nowrap rounded-full px-3 py-1.5 transition-colors hover:bg-white/10"
       >
-        ← MeshUI
+        ← Back to MeshUI
       </Link>
       <Link
         href={`/code/${slug}`}
-        className="rounded-full bg-white px-3 py-1.5 text-black transition-opacity hover:opacity-85"
+        className="whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-black transition-opacity hover:opacity-85"
       >
         View code
       </Link>

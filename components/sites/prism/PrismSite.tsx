@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import MobileMenu from "@/components/sites/MobileMenu";
 import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
 import type { ShapeId } from "./Optics";
 import type { SizeId } from "./Configurator";
@@ -235,12 +236,15 @@ export default function PrismSite() {
             <a href="#craft" className="hover:text-stone-900">Craft</a>
             <a href="#contact" className="hover:text-stone-900">Contact</a>
           </div>
+          <div className="flex items-center gap-2">
           <a
             href="#configure"
             className="rounded-full border border-stone-900/80 px-4 py-2 text-[10px] font-medium uppercase tracking-[0.22em] transition-colors hover:bg-stone-900 hover:text-[#f3eee6] sm:text-[11px]"
           >
             Commission
           </a>
+          <MobileMenu tone="light" links={[["#collection", "Collection"], ["#configure", "Configure"], ["#craft", "Craft"], ["#contact", "Contact"]]} />
+        </div>
         </nav>
       </header>
 

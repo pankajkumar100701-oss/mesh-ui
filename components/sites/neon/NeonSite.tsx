@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import MobileMenu from "@/components/sites/MobileMenu";
 import {
   Component,
   useCallback,
@@ -423,12 +424,15 @@ export default function NeonSite() {
             <a href="#garage" className="hover:text-[#18e7ff]">Garage</a>
             <a href="#release" className="hover:text-[#18e7ff]">Release</a>
           </div>
+          <div className="flex items-center gap-2">
           <a
             href="#join"
             className={`${heading} rounded-full border border-[#18e7ff]/70 bg-black/30 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#18e7ff] shadow-[0_0_18px_rgba(24,231,255,0.35)] transition-colors hover:bg-[#18e7ff] hover:text-black sm:text-xs`}
           >
             Wishlist
           </a>
+          <MobileMenu links={[["#features", "Features"], ["#garage", "Garage"], ["#release", "Release"], ["#join", "Wishlist"]]} />
+        </div>
         </nav>
 
         <div

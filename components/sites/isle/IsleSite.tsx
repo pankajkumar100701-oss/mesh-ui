@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 import dynamic from "next/dynamic";
+import MobileMenu from "@/components/sites/MobileMenu";
 import type { Spot } from "./Scene";
 
 const Scene = dynamic(() => import("./Scene"), {
@@ -334,6 +335,7 @@ export default function IsleSite() {
             >
               Book
             </a>
+            <MobileMenu tone={night ? "dark" : "light"} links={[["#stays", "Stays"], ["#experiences", "Experiences"], ["#stories", "Stories"], ["#book", "Book"]]} />
           </div>
         </header>
 

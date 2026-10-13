@@ -1,6 +1,7 @@
 "use client";
 
 import { Component, useEffect, useState, type ReactNode } from "react";
+import MobileMenu from "@/components/sites/MobileMenu";
 import dynamic from "next/dynamic";
 import { chapters } from "./journey";
 
@@ -209,12 +210,15 @@ export default function NebulaSite({ fontClassName = "" }: { fontClassName?: str
               <a href="#pricing" className="transition hover:text-white">Pricing</a>
               <a href="#stories" className="transition hover:text-white">Stories</a>
             </div>
+            <div className="flex items-center gap-2">
             <a
               href="#book"
               className="shrink-0 rounded-full bg-white px-4 py-2 text-xs font-semibold text-black transition hover:bg-fuchsia-200 sm:text-sm"
             >
               Book a seat
             </a>
+            <MobileMenu links={[["#destinations", "Destinations"], ["#voyage", "The voyage"], ["#pricing", "Pricing"], ["#stories", "Stories"]]} />
+          </div>
           </nav>
         </header>
 

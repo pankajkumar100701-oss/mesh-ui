@@ -30,6 +30,7 @@ export const sites: Site[] = [
       "components/sites/nebula/Glow.tsx",
       "components/sites/nebula/journey.ts",
       "components/sites/nebula/shaders.ts",
+      "components/sites/MobileMenu.tsx",
     ],
   },
   {
@@ -45,6 +46,7 @@ export const sites: Site[] = [
       "components/sites/prism/Scene.tsx",
       "components/sites/prism/Optics.tsx",
       "components/sites/prism/Configurator.tsx",
+      "components/sites/MobileMenu.tsx",
     ],
   },
   {
@@ -60,6 +62,7 @@ export const sites: Site[] = [
       "components/sites/neon/Scene.tsx",
       "components/sites/neon/Car.tsx",
       "components/sites/neon/Garage.tsx",
+      "components/sites/MobileMenu.tsx",
     ],
   },
   {
@@ -75,6 +78,7 @@ export const sites: Site[] = [
       "components/sites/bounce/Scene.tsx",
       "components/sites/bounce/Letters.tsx",
       "components/sites/bounce/candies.ts",
+      "components/sites/MobileMenu.tsx",
     ],
   },
   {
@@ -92,6 +96,7 @@ export const sites: Site[] = [
       "components/sites/isle/Sky.tsx",
       "components/sites/isle/Life.tsx",
       "components/sites/isle/shared.ts",
+      "components/sites/MobileMenu.tsx",
     ],
   },
 ];

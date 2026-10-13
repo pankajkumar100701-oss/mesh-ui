@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import MobileMenu from "@/components/sites/MobileMenu";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const Scene = dynamic(() => import("./Scene"), {
@@ -128,12 +129,15 @@ export default function BounceSite() {
             <a href="#how" className="rounded-full px-4 py-1.5 hover:bg-rose-50 hover:text-rose-500">How it&apos;s made</a>
             <a href="#reviews" className="rounded-full px-4 py-1.5 hover:bg-rose-50 hover:text-rose-500">Reviews</a>
           </div>
+          <div className="flex items-center gap-2">
           <a
             href="#shop"
             className="rounded-full bg-[#3b1d2e] px-4 py-2 text-sm font-bold text-white shadow-[0_4px_0_#ff5c8a] transition-transform hover:-translate-y-0.5"
           >
             Shop
           </a>
+          <MobileMenu tone="light" hideAt="sm:hidden" links={[["#flavours", "Flavours"], ["#how", "How it's made"], ["#reviews", "Reviews"], ["#shop", "Shop"]]} />
+        </div>
         </nav>
 
         <div ref={copyRef} className="pointer-events-none relative z-10 mx-auto mt-[3svh] max-w-3xl px-4 text-center">
