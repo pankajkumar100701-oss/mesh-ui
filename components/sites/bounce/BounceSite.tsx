@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const Scene = dynamic(() => import("./Scene"), {
   ssr: false,
@@ -36,14 +36,23 @@ const reviews = [
   { quote: "Prettiest tin on my desk and the candy disappears fast.", name: "Priya S.", stars: 5 },
 ];
 
-function Blob({ colors }: { colors: string[] }) {
+/** A glossy wrapped sweet drawn with CSS only (cheap enough for every card). */
+function CandyArt({ colors, index }: { colors: string[]; index: number }) {
+  const wrap = { background: `linear-gradient(135deg, ${colors[1]}, ${colors[0]})` };
   return (
-    <div className="relative h-24 w-24">
+    <div
+      className="bounce-motion relative h-20 w-28 shrink-0 transition-transform duration-500 group-hover:scale-110"
+      style={{ animation: `bounce-float ${3 + (index % 3) * 0.6}s ease-in-out ${index * 0.3}s infinite` }}
+    >
+      <div className="absolute top-1/2 left-0 h-12 w-9 -translate-y-1/2 [clip-path:polygon(0_0,100%_38%,100%_62%,0_100%,18%_50%)]" style={wrap} />
+      <div className="absolute top-1/2 right-0 h-12 w-9 -translate-y-1/2 [clip-path:polygon(100%_0,0_38%,0_62%,100%_100%,82%_50%)]" style={wrap} />
       <div
-        className="absolute inset-0 rounded-[42%_58%_55%_45%/50%_45%_55%_50%] shadow-[inset_-10px_-12px_0_rgba(0,0,0,0.08)] transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110"
-        style={{ background: `radial-gradient(circle at 30% 30%, ${colors[1]}, ${colors[0]} 65%)` }}
+        className="absolute top-1/2 left-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full shadow-[inset_-8px_-10px_0_rgba(0,0,0,0.12),0_10px_18px_-8px_rgba(59,29,46,0.45)]"
+        style={{
+          background: `repeating-linear-gradient(115deg, transparent 0 9px, rgba(255,255,255,0.55) 9px 15px), radial-gradient(circle at 32% 30%, ${colors[1]}, ${colors[0]} 62%)`,
+        }}
       />
-      <div className="absolute left-4 top-3 h-4 w-6 -rotate-12 rounded-full bg-white/70" />
+      <div className="absolute top-[22%] left-[38%] h-3 w-5 -rotate-12 rounded-full bg-white/80" />
     </div>
   );
 }
@@ -53,54 +62,96 @@ export default function BounceSite() {
   const [shake, setShake] = useState(0);
   const [count, setCount] = useState(0);
   const [full, setFull] = useState(false);
+  const [copyBottom, setCopyBottom] = useState<number | null>(null);
+  const [active, setActive] = useState(true);
+  const heroRef = useRef<HTMLElement>(null);
+  const copyRef = useRef<HTMLDivElement>(null);
   const onCountChange = useCallback((n: number, isFull: boolean) => {
     setCount(n);
     setFull(isFull);
   }, []);
 
+  // Tell the 3D scene where the headline ends so the letters and the candy
+  // pile are laid out in the free space below it.
+  useEffect(() => {
+    const hero = heroRef.current;
+    const copy = copyRef.current;
+    if (!hero || !copy) return;
+    const measure = () => {
+      const h = hero.getBoundingClientRect();
+      const c = copy.getBoundingClientRect();
+      setCopyBottom(Math.round(c.bottom - h.top));
+    };
+    const ro = new ResizeObserver(measure);
+    ro.observe(hero);
+    ro.observe(copy);
+    const io = new IntersectionObserver(([e]) => setActive(e.isIntersecting), { rootMargin: "80px" });
+    io.observe(hero);
+    return () => {
+      ro.disconnect();
+      io.disconnect();
+    };
+  }, []);
+
   return (
-    <div className="min-h-screen bg-[#fff7f2] text-[#3b1d2e]">
+    <div className="min-h-screen overflow-x-clip bg-[#fff7f2] text-[#3b1d2e]">
+      <style>{`
+        @keyframes bounce-marquee { from { transform: translateX(0) } to { transform: translateX(-50%) } }
+        @keyframes bounce-float { 0%,100% { transform: translateY(0) rotate(-6deg) } 50% { transform: translateY(-8px) rotate(6deg) } }
+        @media (prefers-reduced-motion: reduce) { .bounce-motion { animation: none !important } }
+      `}</style>
+
       {/* ---------- hero ---------- */}
-      <section className="relative h-[100svh] min-h-[560px] overflow-hidden bg-[radial-gradient(circle_at_20%_10%,#ffe4ec,transparent_45%),radial-gradient(circle_at_85%_20%,#fef3c7,transparent_40%),radial-gradient(circle_at_50%_100%,#e0f2fe,transparent_55%)]">
+      <section
+        ref={heroRef}
+        className="relative h-[100svh] min-h-[600px] overflow-hidden bg-[radial-gradient(circle_at_18%_12%,#ffd9e6,transparent_42%),radial-gradient(circle_at_85%_18%,#fff0c2,transparent_40%),radial-gradient(circle_at_50%_105%,#d6efff,transparent_55%),linear-gradient(#fff6f1,#fff1f4)]"
+      >
         <div className="absolute inset-0">
-          <Scene batches={batches} shake={shake} onCountChange={onCountChange} />
+          {copyBottom !== null && (
+            <Scene
+              batches={batches}
+              shake={shake}
+              copyBottom={copyBottom}
+              active={active}
+              onCountChange={onCountChange}
+            />
+          )}
         </div>
 
-        <nav className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-4 pt-5 sm:px-8">
+        <nav className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-4 pt-4 sm:px-8 sm:pt-5">
           <a href="#" className="flex items-center gap-2 text-xl font-bold" style={display}>
-            <span className="inline-block h-7 w-7 rounded-full bg-[conic-gradient(#fb7185,#facc15,#38bdf8,#a78bfa,#fb7185)] ring-4 ring-white" />
+            <span className="inline-block h-7 w-7 rounded-full bg-[conic-gradient(#ff5c8a,#ffd23f,#3ec5ff,#a78bfa,#ff5c8a)] shadow-[inset_-3px_-3px_0_rgba(0,0,0,0.12)] ring-4 ring-white" />
             Bounce
           </a>
-          <div className="hidden items-center gap-7 text-sm font-semibold sm:flex">
-            <a href="#flavours" className="hover:text-rose-500">Flavours</a>
-            <a href="#how" className="hover:text-rose-500">How it&apos;s made</a>
-            <a href="#reviews" className="hover:text-rose-500">Reviews</a>
+          <div className="hidden items-center gap-1 rounded-full bg-white/70 p-1 text-sm font-semibold shadow-sm ring-1 ring-[#3b1d2e]/5 backdrop-blur sm:flex">
+            <a href="#flavours" className="rounded-full px-4 py-1.5 hover:bg-rose-50 hover:text-rose-500">Flavours</a>
+            <a href="#how" className="rounded-full px-4 py-1.5 hover:bg-rose-50 hover:text-rose-500">How it&apos;s made</a>
+            <a href="#reviews" className="rounded-full px-4 py-1.5 hover:bg-rose-50 hover:text-rose-500">Reviews</a>
           </div>
           <a
             href="#shop"
-            className="rounded-full bg-[#3b1d2e] px-4 py-2 text-sm font-bold text-white shadow-[0_4px_0_#fb7185] transition-transform hover:-translate-y-0.5"
+            className="rounded-full bg-[#3b1d2e] px-4 py-2 text-sm font-bold text-white shadow-[0_4px_0_#ff5c8a] transition-transform hover:-translate-y-0.5"
           >
             Shop
           </a>
         </nav>
 
-        <div className="pointer-events-none relative z-10 mx-auto mt-[9svh] max-w-3xl px-4 text-center">
-          <p className="mb-3 inline-block rounded-full bg-white/80 px-3 py-1 text-xs font-bold uppercase tracking-widest text-rose-500 shadow-sm">
-            Grab one · fling it
+        <div ref={copyRef} className="pointer-events-none relative z-10 mx-auto mt-[3svh] max-w-3xl px-4 text-center">
+          <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/85 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-rose-500 shadow-sm ring-1 ring-rose-100">
+            <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+            Small-batch fruit candy
           </p>
-          <h1 className="text-5xl leading-[0.95] font-bold tracking-tight sm:text-7xl md:text-8xl" style={display}>
-            Sweets that
-            <br />
-            <span className="text-rose-500">bounce back.</span>
+          <h1 className="text-[2.6rem] leading-[0.95] font-bold tracking-tight sm:text-6xl" style={display}>
+            Sweets that <span className="text-rose-500">bounce back.</span>
           </h1>
-          <p className="mx-auto mt-4 max-w-md text-base font-medium text-[#3b1d2e]/70 sm:text-lg">
-            Small-batch fruit candy, glossy as a gumball and twice as fun. Go on — throw one.
+          <p className="mx-auto mt-3 max-w-md text-sm font-medium text-[#3b1d2e]/70 sm:text-lg">
+            Glossy as a gumball and twice as fun. Grab one, fling it, shake the jar.
           </p>
-          <div className="pointer-events-auto mt-6 flex flex-wrap items-center justify-center gap-3">
+          <div className="pointer-events-auto mt-4 flex flex-wrap items-center justify-center gap-3 sm:mt-5">
             <button
               type="button"
               onClick={() => setShake((s) => s + 1)}
-              className="rounded-full bg-rose-500 px-6 py-3 text-base font-bold text-white shadow-[0_5px_0_#be123c] transition-all hover:-translate-y-0.5 active:translate-y-1 active:shadow-[0_1px_0_#be123c]"
+              className="rounded-full bg-rose-500 px-6 py-2.5 text-base font-bold text-white shadow-[0_5px_0_#be123c] transition-all hover:-translate-y-0.5 active:translate-y-1 active:shadow-[0_1px_0_#be123c]"
               style={display}
             >
               Shake it!
@@ -109,17 +160,34 @@ export default function BounceSite() {
               type="button"
               onClick={() => setBatches((b) => b + 1)}
               disabled={full}
-              className="rounded-full bg-white px-6 py-3 text-base font-bold shadow-[0_5px_0_#facc15] transition-all hover:-translate-y-0.5 active:translate-y-1 active:shadow-[0_1px_0_#facc15] disabled:opacity-50"
+              className="rounded-full bg-white px-6 py-2.5 text-base font-bold shadow-[0_5px_0_#ffd23f] ring-1 ring-[#3b1d2e]/5 transition-all hover:-translate-y-0.5 active:translate-y-1 active:shadow-[0_1px_0_#ffd23f] disabled:opacity-50"
               style={display}
             >
               {full ? "Jar's full!" : "More candy"}
             </button>
           </div>
-          {count > 0 && (
-            <p className="mt-3 text-xs font-semibold text-[#3b1d2e]/50">{count} candies in play</p>
-          )}
         </div>
+
+        <p className="pointer-events-none absolute right-4 bottom-4 z-10 hidden rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-[#3b1d2e]/60 shadow-sm backdrop-blur sm:block">
+          {count > 0 ? `${count} candies in play · ` : ""}drag · fling · click to boop
+        </p>
       </section>
+
+      {/* ---------- ribbon ---------- */}
+      <div className="relative mt-2 -rotate-1 overflow-hidden bg-[#3b1d2e] py-3 text-white">
+        <div className="bounce-motion flex w-max animate-[bounce-marquee_28s_linear_infinite] gap-8 whitespace-nowrap text-lg font-bold" style={display}>
+          {Array.from({ length: 2 }).map((_, k) => (
+            <div key={k} className="flex gap-8" aria-hidden={k === 1}>
+              {["Fruity", "Glossy", "Bouncy", "Small-batch", "No fake colours", "Hand-packed", "Seriously chewy"].map((w, i) => (
+                <span key={w} className="flex items-center gap-8">
+                  {w}
+                  <span className="inline-block h-3 w-3 rounded-full" style={{ background: flavours[i % flavours.length].colors[0] }} />
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* ---------- flavours ---------- */}
       <section id="flavours" className="mx-auto max-w-6xl px-4 py-20 sm:px-8 sm:py-28">
@@ -130,13 +198,17 @@ export default function BounceSite() {
           <p className="max-w-sm text-[#3b1d2e]/70">Six signature sweets, all natural colours, zero boring.</p>
         </div>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {flavours.map((f) => (
+          {flavours.map((f, i) => (
             <article
               key={f.name}
-              className="group flex items-center gap-5 rounded-[2rem] bg-white p-5 shadow-[0_6px_0_rgba(59,29,46,0.08)] ring-1 ring-[#3b1d2e]/5 transition-transform hover:-translate-y-1"
+              className="group relative flex items-center gap-4 overflow-hidden rounded-[2rem] bg-white p-5 shadow-[0_6px_0_rgba(59,29,46,0.08)] ring-1 ring-[#3b1d2e]/5 transition-all hover:-translate-y-1 hover:shadow-[0_10px_0_rgba(59,29,46,0.1)]"
             >
-              <Blob colors={f.colors} />
-              <div>
+              <div
+                className="pointer-events-none absolute -top-10 -left-10 h-40 w-40 rounded-full opacity-40 blur-2xl transition-opacity group-hover:opacity-70"
+                style={{ background: f.colors[1] }}
+              />
+              <CandyArt colors={f.colors} index={i} />
+              <div className="relative min-w-0">
                 <h3 className="text-xl font-bold" style={display}>{f.name}</h3>
                 <p className="mt-1 text-sm text-[#3b1d2e]/65">{f.note}</p>
                 <div className="mt-3 flex gap-1.5">

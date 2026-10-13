@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
-import { Environment, Lightformer } from "@react-three/drei";
+import { Environment, Lightformer, PerformanceMonitor } from "@react-three/drei";
 import {
   BallCollider,
   CapsuleCollider,
@@ -13,23 +13,47 @@ import {
 } from "@react-three/rapier";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { createRandom } from "@/lib/random";
+import { COLLIDERS, PALETTE, candyGeometry, getCandyMaterial, pickKind, type Kind } from "./candies";
+import Letters, { rowSize } from "./Letters";
 
-const PALETTE = ["#fb7185", "#f472b6", "#facc15", "#38bdf8", "#a78bfa", "#34d399", "#fb923c"];
-const KINDS = ["donut", "lollipop", "gumdrop", "wrapped"] as const;
-type Kind = (typeof KINDS)[number];
+/* =====================================================================
+   Layout: everything (camera distance, walls, floor, letters) is derived
+   from the canvas size and from where the HTML headline ends, so the candy
+   box always matches exactly what's on screen — at any aspect ratio.
+   ===================================================================== */
 
-type CandySpec = {
-  id: number;
-  kind: Kind;
-  color: string;
-  accent: string;
-  position: [number, number, number];
-  rotation: [number, number, number];
-};
+const FOV = 30;
+const TAN = Math.tan(THREE.MathUtils.degToRad(FOV / 2));
+/** Candies live in a slab -SLAB..SLAB along z; walls are fitted to the FRONT plane. */
+const SLAB = 1.1;
 
-/** Holds the candy currently being dragged and drives the canvas cursor. */
+export type Layout = ReturnType<typeof computeLayout>;
+
+function computeLayout(width: number, height: number, copyBottom: number) {
+  const phone = width < 640;
+  const rows = phone ? ["BOU", "NCE"] : ["BOUNCE"];
+  const row = rows.map(rowSize);
+  const lettersW = Math.max(...row.map((r) => r.width));
+  const lettersH = rows.length * row[0].height + (rows.length - 1) * 0.55;
+  const pile = phone ? 2.1 : 2.0;
+  const free = THREE.MathUtils.clamp((height - copyBottom) / height, 0.38, 0.92);
+  const aspect = width / height;
+  const needH = Math.max(phone ? 5.5 : 4.8, (lettersH + pile + (phone ? 1 : 1.3)) / (2 * free));
+  const halfH = Math.max(needH, (lettersW / 2 + (phone ? 0.85 : 1.0)) / aspect);
+  const halfW = halfH * aspect;
+  const camZ = SLAB + halfH / TAN;
+  // World y (front plane) of the bottom of the HTML copy.
+  const copyY = halfH - (2 * halfH * copyBottom) / height;
+  const top = copyY - (phone ? 0.5 : 0.8); // leave room for sweets resting on the letters
+  const bottom = -halfH + pile;
+  const space = top - bottom;
+  const lettersY = top - lettersH / 2 - Math.max(0, space - lettersH) * 0.6;
+  return { phone, rows, halfW, halfH, camZ, lettersY, lettersH };
+}
+
+/* ---------- drag state shared by candies and the pointer controller ---------- */
+
 function createDrag() {
   let body: RapierRigidBody | null = null;
   let el: HTMLElement | null = null;
@@ -54,167 +78,219 @@ function createDrag() {
 }
 type Drag = ReturnType<typeof createDrag>;
 
-export type SceneProps = {
-  /** Number of extra batches dropped via "More candy". */
-  batches: number;
-  /** Incremented each time "Shake it!" is pressed. */
-  shake: number;
-  onCountChange?: (count: number, full: boolean) => void;
-};
+/* ---------- pop particles ---------- */
 
-/* ---------- shared geometry & materials ---------- */
+const POP_MAX = 220;
 
-function useCandyAssets() {
-  return useMemo(() => {
-    const rand = createRandom(7);
-
-    // Sprinkles: many tiny capsules merged into one vertex-coloured geometry.
-    const sprinkleParts: THREE.BufferGeometry[] = [];
-    const color = new THREE.Color();
-    for (let i = 0; i < 26; i++) {
-      const g = new THREE.CapsuleGeometry(0.025, 0.09, 2, 6);
-      const angle = rand() * Math.PI * 2;
-      const r = 0.32 + rand() * 0.26;
-      g.rotateZ(rand() * Math.PI);
-      g.rotateX(Math.PI / 2 + (rand() - 0.5) * 0.6);
-      g.translate(Math.cos(angle) * r, Math.sin(angle) * r, 0.27);
-      color.set(PALETTE[Math.floor(rand() * PALETTE.length)]);
-      const count = g.attributes.position.count;
-      const colors = new Float32Array(count * 3);
-      for (let v = 0; v < count; v++) color.toArray(colors, v * 3);
-      g.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-      g.deleteAttribute("uv");
-      sprinkleParts.push(g);
-    }
-    const sprinkles = mergeGeometries(sprinkleParts)!;
-
-    // Icing: the front half of a slightly fatter torus.
-    const icing = new THREE.TorusGeometry(0.46, 0.235, 18, 40);
-
-    // Lollipop swirl: stacked rings on the face of the disc.
-    const swirl = new THREE.TorusGeometry(1, 0.05, 8, 40);
-
-    const materials = new Map<string, THREE.MeshPhysicalMaterial>();
-    const material = (hex: string, roughness = 0.22) => {
-      const key = `${hex}-${roughness}`;
-      let m = materials.get(key);
-      if (!m) {
-        m = new THREE.MeshPhysicalMaterial({
-          color: hex,
-          roughness,
-          clearcoat: 1,
-          clearcoatRoughness: 0.08,
-          sheen: 0.4,
-          sheenColor: new THREE.Color("#ffffff"),
-        });
-        materials.set(key, m);
+function createPops() {
+  const pos = new Float32Array(POP_MAX * 3);
+  const vel = new Float32Array(POP_MAX * 3);
+  const life = new Float32Array(POP_MAX);
+  const size = new Float32Array(POP_MAX);
+  const colors: THREE.Color[] = Array.from({ length: POP_MAX }, () => new THREE.Color());
+  let cursor = 0;
+  let alive = 0;
+  let budget = 0;
+  const m = new THREE.Matrix4();
+  const q = new THREE.Quaternion();
+  const s = new THREE.Vector3();
+  const p = new THREE.Vector3();
+  const white = new THREE.Color("#ffffff");
+  return {
+    /** Burst of sugar sparkles. Rate limited so an avalanche doesn't flood. */
+    emit(x: number, y: number, z: number, hex: string, n = 8, power = 1) {
+      if (budget <= 0) return;
+      budget--;
+      for (let k = 0; k < n; k++) {
+        const i = cursor;
+        cursor = (cursor + 1) % POP_MAX;
+        const a = Math.random() * Math.PI * 2;
+        const sp = (2 + Math.random() * 3.5) * power;
+        pos[i * 3] = x;
+        pos[i * 3 + 1] = y;
+        pos[i * 3 + 2] = z + 0.3;
+        vel[i * 3] = Math.cos(a) * sp;
+        vel[i * 3 + 1] = Math.sin(a) * sp + 2.5;
+        vel[i * 3 + 2] = (Math.random() - 0.2) * 2;
+        life[i] = 0.45 + Math.random() * 0.35;
+        size[i] = 0.06 + Math.random() * 0.08;
+        colors[i].set(hex).lerp(white, Math.random() * 0.5);
       }
-      return m;
-    };
+      alive = POP_MAX;
+    },
+    update(mesh: THREE.InstancedMesh, dt: number) {
+      budget = Math.min(budget + dt * 40, 6);
+      if (alive <= 0) return;
+      let any = 0;
+      for (let i = 0; i < POP_MAX; i++) {
+        if (life[i] > 0) {
+          life[i] -= dt;
+          vel[i * 3 + 1] -= 14 * dt;
+          pos[i * 3] += vel[i * 3] * dt;
+          pos[i * 3 + 1] += vel[i * 3 + 1] * dt;
+          pos[i * 3 + 2] += vel[i * 3 + 2] * dt;
+          const k = Math.max(0, life[i]) / 0.8;
+          s.setScalar(size[i] * Math.min(1, k * 2.2));
+          any++;
+        } else s.setScalar(0);
+        p.set(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]);
+        m.compose(p, q, s);
+        mesh.setMatrixAt(i, m);
+        mesh.setColorAt(i, colors[i]);
+      }
+      mesh.instanceMatrix.needsUpdate = true;
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      alive = any;
+      if (!any) alive = 0;
+    },
+  };
+}
+type Pops = ReturnType<typeof createPops>;
 
-    const sprinkleMaterial = new THREE.MeshPhysicalMaterial({
-      vertexColors: true,
-      roughness: 0.35,
-      clearcoat: 0.6,
-    });
-    const dough = new THREE.MeshPhysicalMaterial({ color: "#f3c98b", roughness: 0.6, clearcoat: 0.2 });
-    const stick = new THREE.MeshStandardMaterial({ color: "#fffaf3", roughness: 0.5 });
-
-    return { sprinkles, icing, swirl, material, sprinkleMaterial, dough, stick };
+function PopMesh({ pops }: { pops: Pops }) {
+  const mesh = useRef<THREE.InstancedMesh>(null);
+  const geometry = useMemo(() => new THREE.OctahedronGeometry(1, 0), []);
+  const material = useMemo(() => new THREE.MeshBasicMaterial({ toneMapped: false }), []);
+  useEffect(() => {
+    const m = mesh.current;
+    if (!m) return;
+    const zero = new THREE.Matrix4().makeScale(0, 0, 0);
+    const c = new THREE.Color("#ffffff");
+    for (let i = 0; i < POP_MAX; i++) {
+      m.setMatrixAt(i, zero);
+      m.setColorAt(i, c);
+    }
+    m.instanceMatrix.needsUpdate = true;
   }, []);
+  useFrame((_, dt) => {
+    if (mesh.current) pops.update(mesh.current, Math.min(dt, 0.05));
+  });
+  return <instancedMesh ref={mesh} args={[geometry, material, POP_MAX]} frustumCulled={false} />;
 }
 
-type Assets = ReturnType<typeof useCandyAssets>;
+/* ---------- candies ---------- */
 
-/* ---------- candy meshes ---------- */
+type CandySpec = {
+  id: number;
+  kind: Kind;
+  color: string;
+  accent: string;
+  scale: number;
+  position: [number, number, number];
+  rotation: [number, number, number];
+  velocity: [number, number, number];
+  spin: [number, number, number];
+};
 
-function CandyBody({ spec, assets }: { spec: CandySpec; assets: Assets }) {
-  const main = assets.material(spec.color);
-  const accent = assets.material(spec.accent);
-  switch (spec.kind) {
-    case "donut":
-      return (
-        <>
-          <mesh castShadow material={assets.dough}>
-            <torusGeometry args={[0.45, 0.22, 18, 40]} />
-          </mesh>
-          <mesh castShadow geometry={assets.icing} material={main} position={[0, 0, 0.06]} scale={[1, 1, 0.75]} />
-          <mesh geometry={assets.sprinkles} material={assets.sprinkleMaterial} />
-          <CylinderCollider args={[0.22, 0.67]} rotation={[Math.PI / 2, 0, 0]} restitution={0.55} friction={0.7} />
-        </>
-      );
-    case "lollipop":
-      return (
-        <>
-          <mesh castShadow material={main} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.55, 0.55, 0.22, 40]} />
-          </mesh>
-          {[0.42, 0.28, 0.14].map((r, i) => (
-            <mesh
-              key={r}
-              geometry={assets.swirl}
-              material={i % 2 ? main : accent}
-              scale={[r, r, 1]}
-              position={[0, 0, 0.115]}
-            />
-          ))}
-          <mesh castShadow material={assets.stick} position={[0, -0.95, 0]}>
-            <cylinderGeometry args={[0.045, 0.045, 1, 10]} />
-          </mesh>
-          <CylinderCollider args={[0.11, 0.55]} rotation={[Math.PI / 2, 0, 0]} restitution={0.6} friction={0.6} />
-          <CuboidCollider args={[0.05, 0.5, 0.05]} position={[0, -0.95, 0]} restitution={0.4} />
-        </>
-      );
-    case "gumdrop":
-      return (
-        <>
-          <mesh castShadow material={main}>
-            <capsuleGeometry args={[0.3, 0.38, 8, 20]} />
-          </mesh>
-          <CapsuleCollider args={[0.19, 0.3]} restitution={0.85} friction={0.5} />
-        </>
-      );
-    case "wrapped":
-      return (
-        <>
-          <mesh castShadow material={main} scale={[1.25, 0.9, 0.9]}>
-            <sphereGeometry args={[0.36, 28, 20]} />
-          </mesh>
-          {[-1, 1].map((side) => (
-            <mesh
-              key={side}
-              castShadow
-              material={accent}
-              position={[side * 0.62, 0, 0]}
-              rotation={[0, 0, (side * Math.PI) / 2]}
-            >
-              <coneGeometry args={[0.26, 0.38, 14, 1, true]} />
-            </mesh>
-          ))}
-          <BallCollider args={[0.38]} restitution={0.7} friction={0.6} />
-          <CuboidCollider args={[0.78, 0.18, 0.18]} restitution={0.5} />
-        </>
-      );
+type Entry = {
+  spec: CandySpec;
+  body: RapierRigidBody;
+  mesh: THREE.Mesh;
+  vx: number;
+  vy: number;
+  vz: number;
+  jig: number;
+  jigT: number;
+  cool: number;
+  age: number;
+};
+
+function makeSpecs(
+  count: number,
+  box: { halfW: number; halfH: number; lettersTop: number },
+  initial: number,
+  batchSize: number,
+  calm: boolean,
+) {
+  const specs: CandySpec[] = [];
+  const usable = Math.max(1, 2 * box.halfW - 1.4);
+  const perRow = Math.max(4, Math.floor(usable / 1.05));
+  for (let i = 0; i < count; i++) {
+    const rand = createRandom(1000 + i * 31);
+    const kind = pickKind(rand());
+    const color = PALETTE[Math.floor(rand() * PALETTE.length)];
+    let accent = PALETTE[Math.floor(rand() * PALETTE.length)];
+    if (accent === color) accent = "#ffffff";
+    const scale = (kind === "lollipop" || kind === "donut" ? 0.82 : 0.95) + rand() * 0.2;
+    const inBatch = i < initial ? i : (i - initial) % batchSize;
+    const row = Math.floor(inBatch / perRow);
+    let position: [number, number, number];
+    let velocity: [number, number, number];
+    if (calm && i < initial) {
+      // Reduced motion: start as a settled heap along the floor.
+      const col = inBatch % perRow;
+      position = [
+        -box.halfW + 0.7 + (col + (row % 2) * 0.5) * (usable / perRow),
+        // two rows on the floor, the rest resting on top of the letters
+        row < 2 ? -box.halfH + 0.5 + row * 0.75 : box.lettersTop + 0.5 + (row - 2) * 0.8,
+        (rand() - 0.5) * 1.2,
+      ];
+      velocity = [0, 0, 0];
+    } else {
+      position = [
+        -box.halfW + 0.7 + rand() * usable,
+        box.halfH + 1.4 + row * 1.5 + rand() * 1.2,
+        (rand() - 0.5) * 1.4,
+      ];
+      velocity = [(rand() - 0.5) * 2.5, -5 - rand() * 4, 0];
+    }
+    specs.push({
+      id: i,
+      kind,
+      color,
+      accent,
+      scale,
+      position,
+      rotation: [rand() * Math.PI, rand() * Math.PI, rand() * Math.PI],
+      velocity,
+      spin: calm ? [0, 0, 0] : [(rand() - 0.5) * 8, (rand() - 0.5) * 8, (rand() - 0.5) * 8],
+    });
   }
+  return specs;
+}
+
+function CandyColliders({ kind, s }: { kind: Kind; s: number }) {
+  return (
+    <>
+      {COLLIDERS[kind].map((c, i) => {
+        const pos = (c.pos ?? [0, 0, 0]).map((v) => v * s) as [number, number, number];
+        const common = { position: pos, restitution: 0.62, friction: 0.55 };
+        switch (c.type) {
+          case "ball":
+            return <BallCollider key={i} args={[c.r * s]} {...common} />;
+          case "capsule":
+            return <CapsuleCollider key={i} args={[c.hh * s, c.r * s]} rotation={c.rot} {...common} />;
+          case "cuboid":
+            return (
+              <CuboidCollider key={i} args={[c.he[0] * s, c.he[1] * s, c.he[2] * s]} rotation={c.rot} {...common} />
+            );
+          case "cylinder":
+            return <CylinderCollider key={i} args={[c.hh * s, c.r * s]} rotation={c.rot} {...common} />;
+        }
+      })}
+    </>
+  );
 }
 
 function Candy({
   spec,
-  assets,
+  material,
   register,
   drag,
 }: {
   spec: CandySpec;
-  assets: Assets;
-  register: (id: number, body: RapierRigidBody | null) => void;
+  material: THREE.Material;
+  register: (spec: CandySpec, body: RapierRigidBody | null, mesh: THREE.Mesh | null) => void;
   drag: Drag;
 }) {
   const body = useRef<RapierRigidBody>(null);
+  const mesh = useRef<THREE.Mesh>(null);
+  const geometry = useMemo(() => candyGeometry(spec.kind, spec.color, spec.accent), [spec.kind, spec.color, spec.accent]);
 
   useEffect(() => {
-    register(spec.id, body.current);
-    return () => register(spec.id, null);
-  }, [register, spec.id]);
+    register(spec, body.current, mesh.current);
+    return () => register(spec, null, null);
+  }, [register, spec]);
 
   const onDown = (e: ThreeEvent<PointerEvent>) => {
     if (!body.current || drag.held()) return;
@@ -228,44 +304,48 @@ function Candy({
       colliders={false}
       position={spec.position}
       rotation={spec.rotation}
-      linearDamping={0.15}
-      angularDamping={0.4}
-      ccd
+      linearVelocity={spec.velocity}
+      angularVelocity={spec.spin}
+      linearDamping={0.12}
+      angularDamping={0.35}
     >
-      <group
+      <mesh
+        ref={mesh}
+        geometry={geometry}
+        material={material}
+        scale={spec.scale}
+        castShadow
         onPointerDown={onDown}
         onPointerOver={() => drag.hover(true)}
         onPointerOut={() => drag.hover(false)}
-      >
-        <CandyBody spec={spec} assets={assets} />
-      </group>
+      />
+      <CandyColliders kind={spec.kind} s={spec.scale} />
     </RigidBody>
   );
 }
 
-/* ---------- invisible box the candies live in ---------- */
+/* ---------- invisible box fitted to the visible frustum ---------- */
 
-function Bounds() {
-  const { width, height } = useThree((s) => s.viewport);
-  const w = width / 2;
-  const h = height / 2;
+function Bounds({ halfW, halfH }: { halfW: number; halfH: number }) {
+  const T = 1.5; // wall half-thickness: thick walls stop fast flings tunnelling
+  const tall = halfH + 30;
   return (
-    <RigidBody type="fixed" colliders={false} key={`${width.toFixed(2)}-${height.toFixed(2)}`}>
-      <CuboidCollider args={[w + 2, 0.5, 3]} position={[0, -h - 0.5, 0]} restitution={0.5} friction={0.8} />
-      <CuboidCollider args={[0.5, h + 8, 3]} position={[-w - 0.5, 6, 0]} />
-      <CuboidCollider args={[0.5, h + 8, 3]} position={[w + 0.5, 6, 0]} />
-      <CuboidCollider args={[w + 2, h + 8, 0.5]} position={[0, 6, -2.1]} />
-      <CuboidCollider args={[w + 2, h + 8, 0.5]} position={[0, 6, 2.1]} />
-      <CuboidCollider args={[w + 2, 0.5, 3]} position={[0, h + 14, 0]} />
+    <RigidBody type="fixed" colliders={false} key={`${halfW.toFixed(2)}-${halfH.toFixed(2)}`}>
+      <CuboidCollider args={[halfW + 4, T, SLAB + 4]} position={[0, -halfH - T, 0]} restitution={0.45} friction={0.85} />
+      <CuboidCollider args={[T, tall, SLAB + 4]} position={[-halfW - T, tall - halfH - 2, 0]} restitution={0.5} />
+      <CuboidCollider args={[T, tall, SLAB + 4]} position={[halfW + T, tall - halfH - 2, 0]} restitution={0.5} />
+      <CuboidCollider args={[halfW + 4, tall, T]} position={[0, tall - halfH - 2, -SLAB - T]} restitution={0.4} />
+      <CuboidCollider args={[halfW + 4, tall, T]} position={[0, tall - halfH - 2, SLAB + T]} restitution={0.4} />
+      <CuboidCollider args={[halfW + 4, T, SLAB + 4]} position={[0, 2 * tall - halfH - 2 + T, 0]} />
     </RigidBody>
   );
 }
 
-/* ---------- pointer: drag, fling and the hover pusher ---------- */
+/* ---------- pointer: drag + fling, hover pusher ---------- */
 
 const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
 const hit = new THREE.Vector3();
-const PARKED = { x: 0, y: -100, z: 0 };
+const PARKED = { x: 0, y: -200, z: 0 };
 
 function PointerControls({ drag }: { drag: Drag }) {
   const pusher = useRef<RapierRigidBody>(null);
@@ -283,9 +363,9 @@ function PointerControls({ drag }: { drag: Drag }) {
     const leave = () => {
       hover.current.inside = false;
     };
-    // While a candy is held on a touch screen, stop the page from scrolling.
+    // Only while a candy is held do we stop the page from scrolling on touch.
     const touchMove = (e: TouchEvent) => {
-      if (drag.held()) e.preventDefault();
+      if (drag.held() && e.cancelable) e.preventDefault();
     };
     el.addEventListener("pointerenter", enter);
     el.addEventListener("pointermove", enter);
@@ -310,16 +390,16 @@ function PointerControls({ drag }: { drag: Drag }) {
       plane.constant = -p.z;
       state.raycaster.setFromCamera(state.pointer, state.camera);
       if (state.raycaster.ray.intersectPlane(plane, hit)) {
-        let vx = (hit.x - p.x) * 14;
-        let vy = (hit.y - p.y) * 14;
+        let vx = (hit.x - p.x) * 16;
+        let vy = (hit.y - p.y) * 16;
         const speed = Math.hypot(vx, vy);
-        if (speed > 28) {
-          vx *= 28 / speed;
-          vy *= 28 / speed;
+        if (speed > 32) {
+          vx *= 32 / speed;
+          vy *= 32 / speed;
         }
-        held.setLinvel({ x: vx, y: vy, z: -p.z * 2 }, true);
+        held.setLinvel({ x: vx, y: vy, z: -p.z * 3 }, true);
         const av = held.angvel();
-        held.setAngvel({ x: av.x * 0.9, y: av.y * 0.9, z: av.z * 0.9 }, true);
+        held.setAngvel({ x: av.x * 0.92, y: av.y * 0.92, z: av.z * 0.92 + vx * 0.02 }, true);
       }
     }
 
@@ -337,142 +417,287 @@ function PointerControls({ drag }: { drag: Drag }) {
   });
 
   return (
-    <RigidBody ref={pusher} type="kinematicPosition" colliders={false} position={[0, -100, 0]}>
-      <BallCollider args={[0.45]} />
+    <RigidBody ref={pusher} type="kinematicPosition" colliders={false} position={[0, -200, 0]}>
+      <BallCollider args={[0.6]} />
     </RigidBody>
   );
 }
 
-/* ---------- the world ---------- */
+/* ---------- camera: fitted distance + shake ---------- */
 
-function makeSpecs(count: number, width: number, height: number, initial: number, batchSize: number) {
-  const specs: CandySpec[] = [];
-  for (let i = 0; i < count; i++) {
-    const rand = createRandom(1000 + i * 31);
-    const kind = KINDS[Math.floor(rand() * KINDS.length)];
-    const color = PALETTE[Math.floor(rand() * PALETTE.length)];
-    let accent = PALETTE[Math.floor(rand() * PALETTE.length)];
-    if (accent === color) accent = "#ffffff";
-    // Each batch stacks upwards so candies fall in a staggered shower.
-    const indexInBatch = i < initial ? i : (i - initial) % batchSize;
-    const x = (rand() - 0.5) * Math.max(1, width - 1.6);
-    const y = height / 2 + 1.2 + indexInBatch * 0.55;
-    const z = (rand() - 0.5) * 1.8;
-    specs.push({
-      id: i,
-      kind,
-      color,
-      accent,
-      position: [x, y, z],
-      rotation: [rand() * Math.PI, rand() * Math.PI, rand() * Math.PI],
-    });
-  }
-  return specs;
+function CameraRig({ camZ, shake, calm }: { camZ: number; shake: number; calm: boolean }) {
+  const kick = useRef(0);
+  useEffect(() => {
+    if (shake && !calm) kick.current = 1;
+  }, [shake, calm]);
+  useFrame((state, dt) => {
+    const cam = state.camera as THREE.PerspectiveCamera;
+    if (cam.fov !== FOV) {
+      cam.fov = FOV;
+      cam.near = 1;
+      cam.far = camZ + 40;
+      cam.updateProjectionMatrix();
+    }
+    const k = kick.current;
+    kick.current = Math.max(0, k - dt * 2.2);
+    const t = state.clock.elapsedTime;
+    cam.position.set(Math.sin(t * 47) * k * 0.25, Math.cos(t * 39) * k * 0.18, camZ);
+    cam.lookAt(0, 0, 0);
+    if (Math.abs(cam.far - (camZ + 40)) > 0.5) {
+      cam.far = camZ + 40;
+      cam.updateProjectionMatrix();
+    }
+  });
+  return null;
 }
 
-function World({ batches, shake, onCountChange }: SceneProps) {
-  const assets = useCandyAssets();
-  const viewport = useThree((s) => s.viewport);
-  const isPhone = useThree((s) => s.size.width < 640);
+/* ---------- the world ---------- */
+
+type WorldProps = SceneProps & { layout: Layout; calm: boolean; lite: boolean };
+
+function World({ layout, batches, shake, onCountChange, calm, lite }: WorldProps) {
+  const material = getCandyMaterial(lite);
   const [drag] = useState(createDrag);
-  const bodies = useRef(new Map<number, RapierRigidBody>());
+  const [pops] = useState(createPops);
+  const entries = useRef(new Map<number, Entry>());
+  const recover = useRef(0);
 
-  const initial = isPhone ? 24 : 48;
-  const batchSize = isPhone ? 10 : 16;
-  const cap = isPhone ? 54 : 100;
-  const count = Math.min(cap, initial + batches * batchSize);
-
-  // Spawn positions are captured when a candy first mounts; later viewport
-  // changes don't move existing candies, so freeze the dimensions per mount.
-  const [dims] = useState(() => ({ width: viewport.width, height: viewport.height }));
+  // Spawn box & counts are frozen on mount so resizes don't re-spawn sweets.
+  const [frozen] = useState(() => {
+    const floor = 2 * layout.halfW;
+    const density = layout.phone ? 6.5 : 6.2;
+    const initial = Math.round(THREE.MathUtils.clamp(floor * density * (lite && !layout.phone ? 0.75 : 1), 30, layout.phone ? 50 : 110));
+    const batchSize = layout.phone ? 10 : 18;
+    const batches = layout.phone || lite ? 2 : 3;
+    return {
+      halfW: layout.halfW,
+      halfH: layout.halfH,
+      lettersTop: layout.lettersY + layout.lettersH / 2,
+      initial, batchSize, cap: initial + batchSize * batches };
+  });
+  const count = Math.min(frozen.cap, frozen.initial + batches * frozen.batchSize);
   const specs = useMemo(
-    () => makeSpecs(count, dims.width, dims.height, initial, batchSize),
-    [count, dims, initial, batchSize],
+    () => makeSpecs(count, frozen, frozen.initial, frozen.batchSize, calm),
+    [count, frozen, calm],
   );
 
   useEffect(() => {
-    onCountChange?.(count, count >= cap);
-  }, [count, cap, onCountChange]);
+    onCountChange?.(count, count >= frozen.cap);
+  }, [count, frozen.cap, onCountChange]);
 
   const register = useMemo(
-    () => (id: number, body: RapierRigidBody | null) => {
-      if (body) bodies.current.set(id, body);
-      else bodies.current.delete(id);
+    () => (spec: CandySpec, body: RapierRigidBody | null, mesh: THREE.Mesh | null) => {
+      if (body && mesh) {
+        entries.current.set(spec.id, {
+          spec,
+          body,
+          mesh,
+          vx: spec.velocity[0],
+          vy: spec.velocity[1],
+          vz: spec.velocity[2],
+          jig: 0,
+          jigT: 10,
+          cool: 0,
+          age: 0,
+        });
+      } else entries.current.delete(spec.id);
     },
     [],
   );
 
+  // "Shake it!": toss every sweet upward with a twist.
   useEffect(() => {
     if (!shake) return;
-    for (const body of bodies.current.values()) {
-      const m = body.mass();
-      body.wakeUp();
-      body.applyImpulse(
-        { x: (Math.random() - 0.5) * 5 * m, y: (7 + Math.random() * 7) * m, z: (Math.random() - 0.5) * m },
+    for (const e of entries.current.values()) {
+      const b = e.body;
+      const m = b.mass();
+      b.wakeUp();
+      b.applyImpulse(
+        { x: (Math.random() - 0.5) * 6 * m, y: (8 + Math.random() * 9) * m, z: (Math.random() - 0.5) * m },
         true,
       );
-      body.applyTorqueImpulse(
-        { x: (Math.random() - 0.5) * 0.4 * m, y: (Math.random() - 0.5) * 0.4 * m, z: (Math.random() - 0.5) * 0.4 * m },
+      b.applyTorqueImpulse(
+        { x: (Math.random() - 0.5) * 0.3 * m, y: (Math.random() - 0.5) * 0.3 * m, z: (Math.random() - 0.5) * 0.3 * m },
         true,
       );
     }
   }, [shake]);
 
+  // Impact detection by velocity change: squash & stretch + sugar pops.
+  useFrame((_, rawDt) => {
+    const dt = Math.min(rawDt, 0.05);
+    const held = drag.held();
+    recover.current += dt;
+    const doRecover = recover.current > 0.5;
+    if (doRecover) recover.current = 0;
+
+    for (const e of entries.current.values()) {
+      const b = e.body;
+      e.age += dt;
+      e.cool -= dt;
+      if (!b.isSleeping()) {
+        const v = b.linvel();
+        const dv = Math.hypot(v.x - e.vx, v.y - e.vy, v.z - e.vz);
+        e.vx = v.x;
+        e.vy = v.y;
+        e.vz = v.z;
+        if (!calm && b !== held && e.age > 0.15 && dv > 5 && e.cool <= 0) {
+          e.jig = Math.min(0.32, dv * 0.025);
+          e.jigT = 0;
+          e.cool = 0.25;
+          if (dv > 7.5) {
+            const p = b.translation();
+            pops.emit(p.x, p.y, p.z, e.spec.color, dv > 12 ? 10 : 6, Math.min(1.4, dv / 10));
+          }
+        }
+        if (doRecover) {
+          const p = b.translation();
+          if (
+            p.y < -layout.halfH - 3 ||
+            Math.abs(p.x) > layout.halfW + 3 ||
+            Math.abs(p.z) > SLAB + 3 ||
+            p.y > layout.halfH + 45
+          ) {
+            b.setTranslation({ x: (Math.random() - 0.5) * layout.halfW, y: layout.halfH + 2, z: 0 }, true);
+            b.setLinvel({ x: 0, y: -4, z: 0 }, true);
+          }
+        }
+      }
+      if (e.jigT < 1) {
+        e.jigT += dt;
+        const w = e.jig * Math.exp(-e.jigT * 7) * Math.cos(e.jigT * 32);
+        const s = e.spec.scale;
+        e.mesh.scale.set(s * (1 + w * 0.55), s * (1 - w), s * (1 + w * 0.55));
+        if (e.jigT >= 1) e.mesh.scale.setScalar(s);
+      }
+    }
+  });
+
+  // Tap / click on empty space: a candy "boop" shockwave.
+  const onBoop = (ev: ThreeEvent<MouseEvent>) => {
+    if (calm) return;
+    const { x, y } = ev.point;
+    pops.emit(x, y, 0.6, PALETTE[Math.floor(Math.random() * PALETTE.length)], 14, 1.3);
+    for (const e of entries.current.values()) {
+      const p = e.body.translation();
+      const dx = p.x - x;
+      const dy = p.y - y;
+      const d = Math.hypot(dx, dy);
+      if (d > 3.2) continue;
+      const f = (1 - d / 3.2) * 9 * e.body.mass();
+      const n = d || 1;
+      e.body.applyImpulse({ x: (dx / n) * f, y: (dy / n) * f + f * 0.6, z: 0 }, true);
+    }
+  };
+
+  const onLetterHit = useMemo(
+    () => (x: number, y: number, speed: number, color: string) => {
+      if (speed > 6) pops.emit(x, y, 0.4, color, 6, 0.8);
+    },
+    [pops],
+  );
+
   return (
     <>
-      <Bounds />
+      <Bounds halfW={layout.halfW} halfH={layout.halfH} />
       <PointerControls drag={drag} />
+      <Letters rows={layout.rows} centerY={layout.lettersY} calm={calm} onHit={onLetterHit} />
       {specs.map((spec) => (
-        <Candy key={spec.id} spec={spec} assets={assets} register={register} drag={drag} />
+        <Candy key={spec.id} spec={spec} material={material} register={register} drag={drag} />
       ))}
+      <PopMesh pops={pops} />
+      {/* back wall: catches soft shadows and taps */}
+      <mesh position={[0, 0, -SLAB - 0.05]} receiveShadow onClick={onBoop}>
+        <planeGeometry args={[layout.halfW * 2 + 6, layout.halfH * 2 + 6]} />
+        <shadowMaterial transparent opacity={0.16} color="#8a2f5b" />
+      </mesh>
     </>
   );
 }
 
-function ShadowBackdrop() {
-  const { width, height } = useThree((s) => s.viewport);
+/* ---------- canvas ---------- */
+
+export type SceneProps = {
+  /** Extra batches dropped via "More candy". */
+  batches: number;
+  /** Incremented each time "Shake it!" is pressed. */
+  shake: number;
+  /** Pixel offset (from the top of the hero) where the HTML copy ends. */
+  copyBottom: number;
+  /** False while the hero is scrolled out of view: pauses render + physics. */
+  active: boolean;
+  onCountChange?: (count: number, full: boolean) => void;
+};
+
+function Rig(props: SceneProps & { calm: boolean; lite: boolean }) {
+  const size = useThree((s) => s.size);
+  const layout = useMemo(
+    () => computeLayout(size.width, size.height, props.copyBottom),
+    [size.width, size.height, props.copyBottom],
+  );
+  const { halfW, halfH, phone } = layout;
+  const map = phone || props.lite ? 1024 : 2048;
   return (
-    <mesh position={[0, 0, -1.65]} receiveShadow>
-      <planeGeometry args={[width * 1.5, height * 1.5]} />
-      <shadowMaterial transparent opacity={0.14} color="#7a3b5c" />
-    </mesh>
+    <>
+      <CameraRig camZ={layout.camZ} shake={props.shake} calm={props.calm} />
+      <ambientLight intensity={0.55} color="#fff3f8" />
+      <directionalLight
+        position={[halfW * 0.35, halfH * 1.1, 12]}
+        intensity={2.1}
+        color="#fffaf0"
+        castShadow
+        shadow-mapSize={[map, map]}
+        shadow-camera-left={-halfW - 2}
+        shadow-camera-right={halfW + 2}
+        shadow-camera-top={halfH + 2}
+        shadow-camera-bottom={-halfH - 2}
+        shadow-camera-near={1}
+        shadow-camera-far={40}
+        shadow-radius={8}
+        shadow-bias={-0.0004}
+        shadow-normalBias={0.02}
+      />
+      <Physics gravity={[0, -20, 0]} paused={!props.active}>
+        <World {...props} layout={layout} />
+      </Physics>
+    </>
   );
 }
 
 export default function Scene(props: SceneProps) {
+  const [env] = useState(() => {
+    const mq = (q: string) => typeof window !== "undefined" && window.matchMedia(q).matches;
+    const nav = typeof navigator !== "undefined" ? (navigator as Navigator & { deviceMemory?: number }) : undefined;
+    const small = typeof window !== "undefined" && window.innerWidth < 640;
+    const weak = !!nav && ((nav.hardwareConcurrency ?? 8) <= 4 || (nav.deviceMemory ?? 8) <= 4);
+    return { calm: mq("(prefers-reduced-motion: reduce)"), lite: small || weak, small };
+  });
+  const maxDpr = env.small ? 1.5 : 1.75;
+  const [dpr, setDpr] = useState(maxDpr);
+
   return (
     <Canvas
-      shadows
-      dpr={[1, 2]}
-      camera={{ position: [0, 0, 16], fov: 35 }}
-      gl={{ antialias: true, alpha: true }}
+      shadows="percentage"
+      dpr={[1, dpr]}
+      frameloop={props.active ? "always" : "never"}
+      camera={{ position: [0, 0, 20], fov: FOV, near: 1, far: 80 }}
+      gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
+      onCreated={({ gl }) => {
+        gl.toneMapping = THREE.NeutralToneMapping;
+        gl.toneMappingExposure = 1.05;
+      }}
       style={{ touchAction: "pan-y" }}
+      aria-hidden
     >
-      <ambientLight intensity={0.9} />
-      <directionalLight
-        position={[4, 8, 10]}
-        intensity={2.2}
-        castShadow
-        shadow-mapSize={[1024, 1024]}
-        shadow-camera-left={-14}
-        shadow-camera-right={14}
-        shadow-camera-top={10}
-        shadow-camera-bottom={-10}
-        shadow-camera-near={1}
-        shadow-camera-far={30}
-        shadow-radius={6}
-        shadow-bias={-0.0005}
-      />
-      <Environment resolution={128}>
-        <Lightformer form="rect" intensity={3} color="#fff1f6" position={[0, 5, 6]} scale={[10, 3, 1]} />
-        <Lightformer form="rect" intensity={2} color="#fde68a" position={[-6, 0, 4]} scale={[3, 8, 1]} />
-        <Lightformer form="ring" intensity={2.5} color="#bae6fd" position={[6, 2, 3]} scale={3} />
-        <Lightformer form="rect" intensity={1} color="#ffffff" position={[0, -4, 5]} scale={[10, 2, 1]} />
+      <PerformanceMonitor onDecline={() => setDpr(1)} />
+      <Environment resolution={256} frames={1}>
+        <Lightformer form="rect" intensity={3} color="#fff1f6" position={[0, 6, 6]} scale={[14, 3, 1]} />
+        <Lightformer form="rect" intensity={2.4} color="#ffe08a" position={[-8, 1, 4]} scale={[3, 10, 1]} />
+        <Lightformer form="ring" intensity={3} color="#bfe7ff" position={[7, 3, 4]} scale={4} />
+        <Lightformer form="rect" intensity={1.6} color="#ffc4dd" position={[0, -6, 5]} scale={[14, 2, 1]} />
+        <Lightformer form="circle" intensity={2} color="#d9ccff" position={[0, 0, -8]} scale={8} />
       </Environment>
-      <ShadowBackdrop />
-      <Physics gravity={[0, -14, 0]} timeStep="vary">
-        <World {...props} />
-      </Physics>
+      <Rig {...props} calm={env.calm} lite={env.lite} />
     </Canvas>
   );
 }

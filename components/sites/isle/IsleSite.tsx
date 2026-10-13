@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 import dynamic from "next/dynamic";
 import type { Spot } from "./Scene";
 
@@ -73,7 +73,7 @@ const SPOTS: SpotInfo[] = [
     name: "Sunrise Balloon",
     kind: "Experience",
     blurb:
-      "Untie from the dock at dawn and drift a slow loop around the island while the sea below turns gold.",
+      "Untie from the dock at dawn and drift a slow loop around the island while the cloud sea below turns gold.",
     price: 6800,
     unit: "person",
     features: ["Dawn flight", "Hot chai", "60 minutes"],
@@ -111,7 +111,7 @@ const STORIES = [
 
 const MOMENTS = [
   { label: "Dawn", from: "#fcd7a4", to: "#f49ac1" },
-  { label: "Noon", from: "#a5dfe6", to: "#7cc46a" },
+  { label: "Golden hour", from: "#ffd59a", to: "#f08a5d" },
   { label: "Dusk", from: "#f97362", to: "#6d4c9f" },
   { label: "Midnight", from: "#1e3a8a", to: "#0b1630" },
 ];
@@ -123,11 +123,17 @@ function StayArt({ id }: { id: string }) {
     <svg viewBox="0 0 200 120" className="h-full w-full" aria-hidden>
       <defs>
         <linearGradient id={`sky-${id}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor={id === "lookout" ? "#1e3a8a" : "#a5dfe6"} />
-          <stop offset="1" stopColor={id === "lookout" ? "#6d4c9f" : "#e8f7f4"} />
+          <stop offset="0" stopColor={id === "lookout" ? "#1e3a8a" : id === "spa" ? "#7fb2e5" : "#f6b98a"} />
+          <stop offset="1" stopColor={id === "lookout" ? "#6d4c9f" : "#ffeedd"} />
         </linearGradient>
       </defs>
       <rect width="200" height="120" fill={`url(#sky-${id})`} />
+      <g fill={id === "lookout" ? "#4c4f9a" : "#ffffff"} opacity={id === "lookout" ? 0.7 : 0.85}>
+        <circle cx="12" cy="112" r="14" />
+        <circle cx="34" cy="116" r="12" />
+        <circle cx="170" cy="114" r="15" />
+        <circle cx="192" cy="110" r="12" />
+      </g>
       <polygon points="30,78 170,78 140,112 60,112" fill="#9a8a78" />
       <polygon points="60,112 140,112 100,120" fill="#6f6257" />
       <polygon points="24,70 176,70 170,80 30,80" fill="#7cc46a" />
@@ -165,6 +171,24 @@ function StayArt({ id }: { id: string }) {
   );
 }
 
+const REDUCED_QUERY = "(prefers-reduced-motion: reduce)";
+function subscribeReduced(cb: () => void) {
+  const mq = window.matchMedia(REDUCED_QUERY);
+  mq.addEventListener("change", cb);
+  return () => mq.removeEventListener("change", cb);
+}
+
+const INTRO_CSS = `
+@keyframes isle-veil { 0% { opacity: 1 } 35% { opacity: .92 } 100% { opacity: 0; visibility: hidden } }
+@keyframes isle-rise { from { opacity: 0; transform: translateY(18px) } to { opacity: 1; transform: none } }
+.isle-veil { animation: isle-veil 2.6s cubic-bezier(.4,0,.2,1) forwards }
+.isle-rise { opacity: 0; animation: isle-rise 1.1s cubic-bezier(.2,.7,.2,1) forwards }
+@media (prefers-reduced-motion: reduce) {
+  .isle-veil { animation: none; opacity: 0; visibility: hidden }
+  .isle-rise { animation: none; opacity: 1 }
+}
+`;
+
 export default function IsleSite() {
   const [night, setNight] = useState(false);
   const [active, setActive] = useState<string | null>(null);
@@ -174,8 +198,24 @@ export default function IsleSite() {
   const [checkOut, setCheckOut] = useState("");
   const [guests, setGuests] = useState(2);
   const [confirmed, setConfirmed] = useState(false);
+  const [heroVisible, setHeroVisible] = useState(true);
+  const heroRef = useRef<HTMLElement>(null);
+  const reducedMotion = useSyncExternalStore(
+    subscribeReduced,
+    () => window.matchMedia(REDUCED_QUERY).matches,
+    () => false,
+  );
 
-  const activeSpot = SPOTS.find((s) => s.id === active) ?? null;
+  useEffect(() => {
+    const el = heroRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([entry]) => setHeroVisible(entry.isIntersecting), { threshold: 0 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  const activeIndex = SPOTS.findIndex((s) => s.id === active);
+  const activeSpot = activeIndex >= 0 ? SPOTS[activeIndex] : null;
   const stayInfo = STAYS.find((s) => s.id === stay) ?? STAYS[0];
   const nights =
     checkIn && checkOut
@@ -189,7 +229,12 @@ export default function IsleSite() {
     if (spot.unit === "night") setStay(spot.id);
     else setExtras((prev) => (prev.includes(spot.id) ? prev : [...prev, spot.id]));
     setConfirmed(false);
-    document.getElementById("book")?.scrollIntoView({ behavior: "smooth" });
+    document.getElementById("book")?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth" });
+  }
+
+  function step(dir: 1 | -1) {
+    const i = activeIndex < 0 ? 0 : (activeIndex + dir + SPOTS.length) % SPOTS.length;
+    setActive(SPOTS[i].id);
   }
 
   function submit(e: FormEvent) {
@@ -201,14 +246,46 @@ export default function IsleSite() {
 
   return (
     <div
-      className="min-h-screen bg-[#f6f1e7] text-emerald-950 font-(family-name:--font-isle-body)"
+      className="min-h-screen overflow-x-clip bg-[#f6f1e7] text-emerald-950 font-(family-name:--font-isle-body)"
       style={{ colorScheme: "light" }}
     >
+      <style>{INTRO_CSS}</style>
       {/* ---------------------------------------------------------- HERO */}
-      <section className="relative h-svh min-h-[560px] w-full overflow-hidden">
-        <div className="absolute inset-0">
-          <Scene night={night} spots={SPOTS} active={active} onSelect={setActive} />
-        </div>
+      <section ref={heroRef} className="relative h-svh min-h-[580px] w-full overflow-hidden bg-[#f9dcc0]">
+        <Scene
+          night={night}
+          spots={SPOTS}
+          active={active}
+          onSelect={setActive}
+          paused={!heroVisible}
+          reducedMotion={reducedMotion}
+        />
+
+        {/* Legibility scrims: left on desktop, bottom on phones. */}
+        <div
+          aria-hidden
+          className={`pointer-events-none absolute inset-0 z-[5] transition-opacity duration-1000 max-md:hidden ${
+            activeSpot ? "opacity-0" : "opacity-100"
+          } ${
+            night
+              ? "bg-[linear-gradient(90deg,rgba(6,12,38,0.55),rgba(6,12,38,0.15)_38%,transparent_55%)]"
+              : "bg-[linear-gradient(90deg,rgba(255,240,220,0.4),rgba(255,240,220,0.08)_35%,transparent_50%)]"
+          }`}
+        />
+        <div
+          aria-hidden
+          className={`pointer-events-none absolute inset-x-0 bottom-0 z-[5] h-[55%] transition-colors duration-1000 md:hidden ${
+            night
+              ? "bg-gradient-to-t from-[#0a1233]/85 via-[#0a1233]/35 to-transparent"
+              : "bg-gradient-to-t from-[#fff1de]/90 via-[#fff1de]/40 to-transparent"
+          }`}
+        />
+
+        {/* Cloud veil the camera dives out of. */}
+        <div
+          aria-hidden
+          className="isle-veil pointer-events-none absolute inset-0 z-[45] bg-[radial-gradient(ellipse_at_center,#fffaf2_0%,#fde7cf_60%,#f6cfa8_100%)]"
+        />
 
         <header className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-center justify-between gap-3 px-4 py-4 sm:px-8">
           <a
@@ -218,24 +295,34 @@ export default function IsleSite() {
             Isle<span className="text-amber-500">.</span>
           </a>
           <nav
-            className={`pointer-events-auto hidden items-center gap-6 text-sm font-semibold transition-colors duration-700 md:flex ${heroText}`}
+            className={`pointer-events-auto hidden items-center gap-1 rounded-full px-2 py-1 text-sm font-semibold backdrop-blur-md transition-colors duration-700 md:flex ${
+              night ? "bg-white/10 text-white" : "bg-white/35 text-emerald-950"
+            }`}
           >
-            <a href="#stays" className="opacity-80 hover:opacity-100">Stays</a>
-            <a href="#experiences" className="opacity-80 hover:opacity-100">Experiences</a>
-            <a href="#stories" className="opacity-80 hover:opacity-100">Stories</a>
+            {[
+              ["#stays", "Stays"],
+              ["#experiences", "Experiences"],
+              ["#stories", "Stories"],
+            ].map(([href, label]) => (
+              <a key={href} href={href} className="rounded-full px-3 py-1.5 opacity-80 transition hover:bg-white/30 hover:opacity-100">
+                {label}
+              </a>
+            ))}
           </nav>
           <div className="pointer-events-auto flex items-center gap-2">
             <button
               type="button"
               onClick={() => setNight((n) => !n)}
               aria-label={night ? "Switch to day" : "Switch to night"}
+              aria-pressed={night}
+              data-isle-toggle
               className={`relative flex h-9 w-[4.6rem] items-center rounded-full border p-1 backdrop-blur-md transition-colors duration-700 ${
                 night ? "border-white/25 bg-indigo-950/60" : "border-emerald-950/15 bg-white/60"
               }`}
             >
               <span
                 className={`flex size-7 items-center justify-center rounded-full text-sm shadow transition-all duration-500 ${
-                  night ? "translate-x-[2.2rem] bg-indigo-200" : "translate-x-0 bg-amber-300"
+                  night ? "translate-x-[2.2rem] bg-indigo-200 text-indigo-950" : "translate-x-0 bg-amber-300 text-amber-900"
                 }`}
               >
                 {night ? "☾" : "☀"}
@@ -251,90 +338,118 @@ export default function IsleSite() {
         </header>
 
         <div
-          className={`pointer-events-none absolute inset-x-0 bottom-0 z-20 px-4 pb-20 transition-opacity duration-500 sm:px-8 sm:pb-24 ${
-            activeSpot ? "max-md:opacity-0" : "opacity-100"
+          className={`pointer-events-none absolute inset-x-0 bottom-0 z-20 px-4 pb-20 transition-opacity duration-500 sm:px-8 sm:pb-24 md:bottom-auto md:top-1/2 md:max-w-[46rem] md:-translate-y-1/2 md:pb-0 md:pl-12 lg:pl-16 ${
+            activeSpot ? "opacity-0" : "opacity-100"
           }`}
         >
           <p
-            className={`mb-3 text-xs font-bold uppercase tracking-[0.25em] transition-colors duration-700 ${
+            className={`isle-rise mb-3 text-[10px] font-bold uppercase tracking-[0.2em] transition-colors duration-700 sm:text-xs sm:tracking-[0.28em] ${
               night ? "text-amber-300" : "text-emerald-800"
             }`}
+            style={{ animationDelay: "2.2s" }}
           >
-            Boutique retreat · 6 suites · above the clouds
+            Boutique retreat · 6 suites · 900 m up
           </p>
           <h1
-            className={`max-w-2xl text-4xl leading-[1.05] font-semibold transition-colors duration-700 sm:text-6xl lg:text-7xl font-(family-name:--font-isle-display) ${heroText}`}
+            className={`isle-rise text-[2.6rem] leading-[1.02] font-semibold tracking-tight transition-colors duration-700 sm:text-6xl lg:text-7xl font-(family-name:--font-isle-display) ${heroText}`}
+            style={{ animationDelay: "2.45s", textShadow: night ? "0 2px 30px rgba(10,18,51,.6)" : "0 2px 30px rgba(255,240,220,.7)" }}
           >
             A little island,
             <br />
-            <em className="font-normal">adrift above the sea.</em>
+            <em className="font-normal">adrift above the clouds.</em>
           </h1>
-          <div className="pointer-events-auto mt-6 flex flex-wrap items-center gap-3">
+          <p
+            className={`isle-rise mt-4 max-w-md text-sm leading-relaxed sm:text-base max-md:hidden ${night ? "text-white/80" : "text-emerald-950/75"}`}
+            style={{ animationDelay: "2.7s" }}
+          >
+            Three suites, one waterfall and a balloon on a slow loop. Watch the sun go down from the edge of the world.
+          </p>
+          <div className="isle-rise pointer-events-auto mt-6 flex flex-wrap items-center gap-3" style={{ animationDelay: "2.9s" }}>
             <a
               href="#stays"
-              className="rounded-full bg-amber-400 px-5 py-3 text-sm font-bold text-emerald-950 shadow-lg transition-transform hover:-translate-y-0.5"
+              className="rounded-full bg-amber-400 px-5 py-3 text-sm font-bold text-emerald-950 shadow-[0_10px_30px_-8px_rgba(245,158,11,0.8)] transition-transform hover:-translate-y-0.5"
             >
               Explore stays
             </a>
-            <span
+            <button
+              type="button"
+              onClick={() => setActive(SPOTS[0].id)}
               className={`rounded-full px-4 py-2.5 text-xs font-semibold backdrop-blur-md transition-colors duration-700 ${
-                night ? "bg-white/10 text-white/85" : "bg-white/55 text-emerald-950/80"
+                night ? "bg-white/10 text-white/90 hover:bg-white/20" : "bg-white/55 text-emerald-950/85 hover:bg-white/80"
               }`}
             >
-              <span className="hidden md:inline">Drag to spin · </span>
-              <span className="md:hidden">Two fingers to spin · </span>
-              tap the glowing spots
-            </span>
+              Take the tour →<span className="max-md:hidden"> or drag to orbit</span>
+            </button>
           </div>
         </div>
 
         {/* Info card for the selected hotspot */}
         <aside
           aria-live="polite"
-          className={`absolute z-30 transition-all duration-500 max-md:inset-x-3 max-md:bottom-20 md:right-8 md:top-1/2 md:w-[360px] md:-translate-y-1/2 ${
+          className={`absolute z-30 transition-all duration-500 max-md:inset-x-3 max-md:bottom-[4.5rem] md:right-8 md:top-1/2 md:w-[370px] md:-translate-y-1/2 ${
             activeSpot ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-6 opacity-0"
           }`}
         >
           {activeSpot && (
-            <div className="rounded-3xl border border-white/60 bg-white/85 p-5 shadow-2xl backdrop-blur-xl sm:p-6">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-teal-700">{activeSpot.kind}</p>
-                  <h2 className="mt-1 text-2xl font-semibold font-(family-name:--font-isle-display)">{activeSpot.name}</h2>
+            <div
+              key={activeSpot.id}
+              className="isle-rise overflow-hidden rounded-3xl border border-white/60 bg-white/85 shadow-[0_30px_80px_-30px_rgba(6,40,40,0.6)] backdrop-blur-xl"
+              style={{ animationDuration: "0.6s" }}
+            >
+              <div className="h-1.5 bg-gradient-to-r from-amber-300 via-rose-300 to-teal-300" />
+              <div className="p-5 sm:p-6">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-teal-700">
+                      {String(activeIndex + 1).padStart(2, "0")} / {String(SPOTS.length).padStart(2, "0")} · {activeSpot.kind}
+                    </p>
+                    <h2 className="mt-1 text-2xl font-semibold font-(family-name:--font-isle-display)">{activeSpot.name}</h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActive(null)}
+                    aria-label="Close"
+                    className="flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-950/5 text-lg hover:bg-emerald-950/10"
+                  >
+                    ×
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setActive(null)}
-                  aria-label="Close"
-                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-950/5 text-lg hover:bg-emerald-950/10"
-                >
-                  ×
-                </button>
-              </div>
-              <p className="mt-3 text-sm leading-relaxed text-emerald-950/75">{activeSpot.blurb}</p>
-              <ul className="mt-4 flex flex-wrap gap-2">
-                {activeSpot.features.map((f) => (
-                  <li key={f} className="rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-800">
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-5 flex items-end justify-between gap-3">
-                <p>
-                  <span className="text-2xl font-bold">{rupees(activeSpot.price)}</span>
-                  <span className="text-sm text-emerald-950/60"> / {activeSpot.unit}</span>
-                </p>
-                <button
-                  type="button"
-                  onClick={() => planSpot(activeSpot)}
-                  className="rounded-full bg-emerald-950 px-5 py-2.5 text-sm font-bold text-white transition-transform hover:-translate-y-0.5"
-                >
-                  {activeSpot.unit === "night" ? "Book this stay" : "Add to my trip"}
-                </button>
+                <p className="mt-3 text-sm leading-relaxed text-emerald-950/75">{activeSpot.blurb}</p>
+                <ul className="mt-4 flex flex-wrap gap-2">
+                  {activeSpot.features.map((f) => (
+                    <li key={f} className="rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-800">
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-5 flex flex-wrap items-end justify-between gap-3">
+                  <p>
+                    <span className="text-2xl font-bold">{rupees(activeSpot.price)}</span>
+                    <span className="text-sm text-emerald-950/60"> / {activeSpot.unit}</span>
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => planSpot(activeSpot)}
+                    className="rounded-full bg-emerald-950 px-5 py-2.5 text-sm font-bold text-white transition-transform hover:-translate-y-0.5"
+                  >
+                    {activeSpot.unit === "night" ? "Book this stay" : "Add to my trip"}
+                  </button>
+                </div>
+                <div className="mt-4 flex items-center justify-between border-t border-emerald-950/10 pt-3 text-xs font-bold text-emerald-950/60">
+                  <button type="button" onClick={() => step(-1)} className="rounded-full px-2 py-1 hover:bg-emerald-950/5 hover:text-emerald-950">
+                    ← {SPOTS[(activeIndex - 1 + SPOTS.length) % SPOTS.length].name}
+                  </button>
+                  <button type="button" onClick={() => step(1)} className="rounded-full px-2 py-1 hover:bg-emerald-950/5 hover:text-emerald-950">
+                    {SPOTS[(activeIndex + 1) % SPOTS.length].name} →
+                  </button>
+                </div>
               </div>
             </div>
           )}
         </aside>
+
+        {/* Soft hand-off into the page below. */}
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 z-[6] h-10 bg-gradient-to-b from-transparent to-[#f6f1e7]/80" />
       </section>
 
       {/* ---------------------------------------------------------- STAYS */}

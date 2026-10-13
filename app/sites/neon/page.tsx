@@ -17,7 +17,7 @@ const orbitron = Orbitron({
 export const metadata: Metadata = {
   title: "Neon Drive",
   description:
-    "Synthwave racing-game launch page: endless neon terrain, a steerable car and hold-to-boost speed, built with React Three Fiber.",
+    "Synthwave racing-game launch page with a playable hero: dodge traffic, grab orbs and boost down an endless wet neon highway in a procedural sports car, built with React Three Fiber.",
 };
 
 export default function Page() {
