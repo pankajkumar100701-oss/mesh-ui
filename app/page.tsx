@@ -1,6 +1,8 @@
+import Image from "next/image";
 import Link from "next/link";
 import Hero3D from "@/components/home/Hero3D";
 import CopyButton from "@/components/home/CopyButton";
+import { previews } from "@/lib/previews";
 import { sites } from "@/lib/sites";
 
 const INSTALL = "npm i three @react-three/fiber @react-three/drei @react-three/postprocessing @react-three/rapier";
@@ -77,18 +79,28 @@ export default function Home() {
               key={site.slug}
               className={`group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] transition-colors hover:border-white/25 ${i === 0 ? "lg:col-span-2" : ""}`}
             >
-              <Link href={`/sites/${site.slug}`} className="relative block h-48 overflow-hidden sm:h-56">
-                <div
-                  className="absolute inset-0 transition-transform duration-700 group-hover:scale-110"
-                  style={{
-                    background: `radial-gradient(circle at 30% 30%, ${site.colors[0]}, transparent 60%), radial-gradient(circle at 75% 70%, ${site.colors[1]}, transparent 55%), #0b0b10`,
-                  }}
-                />
-                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] bg-[size:28px_28px] [mask-image:linear-gradient(to_bottom,black,transparent)]" />
-                <span className="absolute left-4 top-4 rounded-full bg-black/50 px-2.5 py-1 font-mono text-[11px] text-white/80 backdrop-blur">
+              <Link
+                href={`/sites/${site.slug}`}
+                className="relative block aspect-video overflow-hidden bg-[#0b0b10]"
+                style={{ backgroundImage: `linear-gradient(135deg, ${site.colors[0]}55, ${site.colors[1]}55)` }}
+              >
+                {previews[site.slug] && (
+                  <Image
+                    src={previews[site.slug]}
+                    alt={`${site.name} homepage screenshot`}
+                    placeholder="blur"
+                    sizes={i === 0 ? "(min-width: 1024px) 760px, (min-width: 640px) 50vw, 100vw" : "(min-width: 1024px) 380px, (min-width: 640px) 50vw, 100vw"}
+                    className="h-full w-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+                  />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+                <span className="absolute left-4 top-4 rounded-full bg-black/60 px-2.5 py-1 font-mono text-[11px] text-white/85 backdrop-blur">
                   0{i + 1}
                 </span>
-                <span className="absolute bottom-4 left-4 text-2xl font-semibold tracking-tight text-white drop-shadow sm:text-3xl">
+                <span className="absolute right-4 top-4 rounded-full bg-white px-3 py-1 text-xs font-semibold text-black opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                  Open live demo ↗
+                </span>
+                <span className="absolute bottom-4 left-4 text-2xl font-semibold tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.7)] sm:text-3xl">
                   {site.name}
                 </span>
               </Link>
