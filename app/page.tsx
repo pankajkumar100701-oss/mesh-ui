@@ -8,65 +8,60 @@ const INSTALL = "npm i three @react-three/fiber @react-three/drei @react-three/p
 export default function Home() {
   return (
     <main className="relative flex-1 overflow-x-clip">
-      <div className="relative">
-        <div className="absolute inset-0 h-[640px] sm:h-[760px]">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-[900px] bg-[radial-gradient(60%_50%_at_70%_20%,rgba(109,93,252,0.28),transparent),radial-gradient(40%_40%_at_10%_40%,rgba(34,211,238,0.14),transparent)]"
+      />
+
+      <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
+        <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
+          <span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-violet-500 to-cyan-400 text-xs font-bold text-black">
+            M
+          </span>
+          MeshUI
+        </Link>
+        <nav className="flex items-center gap-5 text-sm text-white/65">
+          <a href="#sites" className="hover:text-white">Websites</a>
+          <a href="#start" className="hover:text-white">Get started</a>
+        </nav>
+      </header>
+
+      <section className="relative z-10 mx-auto grid max-w-6xl items-center gap-6 px-4 pb-16 pt-6 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:pt-10">
+        <div>
+          <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            {sites.length} complete 3D websites · free to copy
+          </p>
+          <h1 className="text-4xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
+            3D websites,
+            <br />
+            <span className="bg-gradient-to-r from-violet-400 via-fuchsia-300 to-cyan-300 bg-clip-text text-transparent">
+              ready to copy.
+            </span>
+          </h1>
+          <p className="mt-5 max-w-lg text-base leading-7 text-white/65 sm:text-lg">
+            MeshUI is a collection of full landing pages built with Three.js and React Three Fiber. Shaders, physics,
+            glass, scroll-driven cameras. Open the live demo, then take the code.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <a
+              href="#sites"
+              className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition-opacity hover:opacity-85"
+            >
+              Browse websites
+            </a>
+            <Link
+              href={`/sites/${sites[0].slug}`}
+              className="rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold transition-colors hover:bg-white/10"
+            >
+              Open a live demo →
+            </Link>
+          </div>
+        </div>
+        <div className="relative h-[340px] sm:h-[460px]">
           <Hero3D />
         </div>
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 h-[640px] bg-[linear-gradient(90deg,#07070a_0%,rgba(7,7,10,0.85)_30%,transparent_65%),linear-gradient(to_bottom,rgba(7,7,10,0.6),transparent_25%,transparent_70%,#07070a)] sm:h-[760px]"
-        />
-
-        <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
-          <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-            <span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-violet-500 to-cyan-400 text-xs font-bold text-black">
-              M
-            </span>
-            MeshUI
-          </Link>
-          <nav className="flex items-center gap-5 text-sm text-white/65">
-            <a href="#sites" className="hover:text-white">Websites</a>
-            <a href="#start" className="hover:text-white">Get started</a>
-          </nav>
-        </header>
-
-        <section className="pointer-events-none relative z-10 mx-auto flex h-[560px] max-w-6xl flex-col justify-center px-4 sm:h-[680px] sm:px-6">
-          <div className="pointer-events-auto max-w-xl">
-            <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/40 px-3 py-1 text-xs text-white/75 backdrop-blur">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-              {sites.length} complete 3D websites · free to copy
-            </p>
-            <h1 className="text-5xl font-semibold leading-[1.02] tracking-tight drop-shadow-[0_2px_24px_rgba(0,0,0,0.8)] sm:text-7xl">
-              3D websites,
-              <br />
-              <span className="bg-gradient-to-r from-violet-400 via-fuchsia-300 to-cyan-300 bg-clip-text text-transparent">
-                ready to copy.
-              </span>
-            </h1>
-            <p className="mt-5 max-w-lg text-base leading-7 text-white/70 sm:text-lg">
-              Full landing pages built with Three.js and React Three Fiber: shaders, physics, glass and scroll-driven
-              cameras. Open the live demo, then take the code.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <a
-                href="#sites"
-                className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition-opacity hover:opacity-85"
-              >
-                Browse websites
-              </a>
-              <Link
-                href={`/sites/${sites[0].slug}`}
-                className="rounded-full border border-white/15 bg-black/30 px-5 py-2.5 text-sm font-semibold backdrop-blur transition-colors hover:bg-white/10"
-              >
-                Open a live demo →
-              </Link>
-            </div>
-          </div>
-          <p className="mt-auto hidden pb-6 text-xs tracking-wide text-white/40 sm:block">
-            Move your cursor over the field. Click to make a splash.
-          </p>
-        </section>
-      </div>
+      </section>
 
       <section id="sites" className="relative z-10 mx-auto max-w-6xl scroll-mt-6 px-4 py-16 sm:px-6">
         <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
