@@ -119,7 +119,7 @@ export default function BounceSite() {
           )}
         </div>
 
-        <nav className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-4 pt-4 sm:px-8 sm:pt-5">
+        <nav className="relative z-10 mx-auto flex max-w-6xl 2xl:max-w-[1600px] items-center justify-between px-4 pt-4 sm:px-8 sm:pt-5">
           <a href="#" className="flex items-center gap-2 text-xl font-bold" style={display}>
             <span className="inline-block h-7 w-7 rounded-full bg-[conic-gradient(#ff5c8a,#ffd23f,#3ec5ff,#a78bfa,#ff5c8a)] shadow-[inset_-3px_-3px_0_rgba(0,0,0,0.12)] ring-4 ring-white" />
             Bounce
@@ -194,7 +194,7 @@ export default function BounceSite() {
       </div>
 
       {/* ---------- flavours ---------- */}
-      <section id="flavours" className="mx-auto max-w-6xl px-4 py-20 sm:px-8 sm:py-28">
+      <section id="flavours" className="mx-auto max-w-6xl 2xl:max-w-[1600px] px-4 py-20 sm:px-8 sm:py-28">
         <div className="mb-10 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <h2 className="text-4xl font-bold sm:text-5xl" style={display}>
             Pick your <span className="text-sky-500">flavour</span>
@@ -228,7 +228,7 @@ export default function BounceSite() {
 
       {/* ---------- how it's made ---------- */}
       <section id="how" className="bg-[#3b1d2e] px-4 py-20 text-white sm:px-8 sm:py-28">
-        <div className="mx-auto max-w-6xl">
+        <div className="mx-auto max-w-6xl 2xl:max-w-[1600px]">
           <h2 className="text-4xl font-bold sm:text-5xl" style={display}>
             How it&apos;s <span className="text-yellow-300">made</span>
           </h2>
@@ -250,7 +250,7 @@ export default function BounceSite() {
       </section>
 
       {/* ---------- reviews ---------- */}
-      <section id="reviews" className="mx-auto max-w-6xl px-4 py-20 sm:px-8 sm:py-28">
+      <section id="reviews" className="mx-auto max-w-6xl 2xl:max-w-[1600px] px-4 py-20 sm:px-8 sm:py-28">
         <h2 className="text-center text-4xl font-bold sm:text-5xl" style={display}>
           Sticky <span className="text-violet-500">reviews</span>
         </h2>
@@ -275,7 +275,7 @@ export default function BounceSite() {
 
       {/* ---------- shop CTA ---------- */}
       <section id="shop" className="px-4 pb-24 sm:px-8">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 rounded-[2.5rem] bg-gradient-to-br from-rose-400 via-pink-400 to-amber-300 px-6 py-14 text-center text-white shadow-[0_10px_0_#be123c] sm:py-20">
+        <div className="mx-auto flex max-w-6xl 2xl:max-w-[1600px] flex-col items-center gap-6 rounded-[2.5rem] bg-gradient-to-br from-rose-400 via-pink-400 to-amber-300 px-6 py-14 text-center text-white shadow-[0_10px_0_#be123c] sm:py-20">
           <h2 className="text-4xl font-bold sm:text-6xl" style={display}>
             The Bounce Tin
           </h2>
@@ -297,7 +297,7 @@ export default function BounceSite() {
 
       {/* ---------- footer ---------- */}
       <footer className="border-t border-[#3b1d2e]/10 px-4 pt-10 pb-24 sm:px-8">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mx-auto flex max-w-6xl 2xl:max-w-[1600px] flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-2xl font-bold" style={display}>Bounce Candy Co.</p>
             <p className="mt-1 text-sm text-[#3b1d2e]/60">Made with sugar and gravity.</p>

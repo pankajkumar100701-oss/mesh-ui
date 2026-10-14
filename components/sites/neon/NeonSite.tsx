@@ -548,7 +548,7 @@ export default function NeonSite() {
           backgroundSize: "48px 48px",
         }}
       >
-        <div className="mx-auto max-w-6xl">
+        <div className="mx-auto max-w-6xl 2xl:max-w-[1600px]">
           <p className={`${heading} text-xs uppercase tracking-[0.4em] text-[#18e7ff]`}>01 · The ride</p>
           <h2 className={`${heading} mt-3 max-w-2xl text-3xl font-black uppercase leading-tight sm:text-5xl`}>
             Built for the{" "}
@@ -578,7 +578,7 @@ export default function NeonSite() {
       {/* ---------- Garage ---------- */}
       <section id="garage" className="relative overflow-hidden px-4 py-24 sm:px-8">
         <div className="pointer-events-none absolute -top-40 left-1/2 h-80 w-[80%] -translate-x-1/2 rounded-full bg-[#7b2cbf]/25 blur-3xl" />
-        <div className="relative mx-auto max-w-6xl">
+        <div className="relative mx-auto max-w-6xl 2xl:max-w-[1600px]">
           <p className={`${heading} text-xs uppercase tracking-[0.4em] text-[#ffb347]`}>02 · The garage</p>
           <h2 className={`${heading} mt-3 text-3xl font-black uppercase sm:text-5xl`}>Pick your machine</h2>
           <div className="mt-12 grid gap-6 lg:grid-cols-5">
@@ -667,7 +667,7 @@ export default function NeonSite() {
 
       {/* ---------- Release ---------- */}
       <section id="release" className="px-4 py-24 sm:px-8">
-        <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2">
+        <div className="mx-auto grid max-w-6xl 2xl:max-w-[1600px] items-center gap-12 lg:grid-cols-2">
           <div>
             <p className={`${heading} text-xs uppercase tracking-[0.4em] text-[#18e7ff]`}>03 · Launch</p>
             <h2 className={`${heading} mt-3 text-3xl font-black uppercase sm:text-5xl`}>
@@ -709,7 +709,7 @@ export default function NeonSite() {
       </section>
 
       <footer className="border-t border-white/10 px-4 pb-24 pt-10 sm:px-8">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 text-xs text-white/45 sm:flex-row">
+        <div className="mx-auto flex max-w-6xl 2xl:max-w-[1600px] flex-col items-center justify-between gap-4 text-xs text-white/45 sm:flex-row">
           <span className={`${display} text-base text-[#ff2a9d]`}>Neon Drive</span>
           <span>© 2027 Afterglow Interactive. A MeshUI demo, all names fictional.</span>
           <div className="flex gap-4 uppercase tracking-widest">

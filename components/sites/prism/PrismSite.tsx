@@ -226,7 +226,7 @@ export default function PrismSite() {
           scrolled ? "bg-[#f3eee6]/70 backdrop-blur-md" : ""
         }`}
       >
-        <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-8">
+        <nav className="mx-auto flex max-w-7xl 2xl:max-w-[1600px] items-center justify-between px-4 py-4 sm:px-8">
           <a href="#top" className={`${serif} text-[1.6rem] leading-none tracking-tight`}>
             Prism <span className="italic text-stone-500">Atelier</span>
           </a>
@@ -265,7 +265,7 @@ export default function PrismSite() {
               <div
                 key={c.roman}
                 aria-hidden={!on}
-                className={`absolute inset-0 mx-auto flex max-w-7xl flex-col justify-end px-5 pb-24 transition-all duration-[900ms] ease-[cubic-bezier(.2,.7,.2,1)] sm:px-8 md:justify-center md:pb-0 ${
+                className={`absolute inset-0 mx-auto flex max-w-7xl 2xl:max-w-[1600px] flex-col justify-end px-5 pb-24 transition-all duration-[900ms] ease-[cubic-bezier(.2,.7,.2,1)] sm:px-8 md:justify-center md:pb-0 ${
                   right ? "md:items-end md:text-right" : ""
                 } ${on ? "opacity-100 blur-0" : "pointer-events-none translate-y-6 opacity-0 blur-[6px]"}`}
               >
@@ -341,7 +341,7 @@ export default function PrismSite() {
 
       {/* Press strip */}
       <div className="relative border-y border-stone-900/10 bg-[#f3eee6]">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-10 gap-y-3 px-5 py-7 sm:justify-between sm:px-8">
+        <div className="mx-auto flex max-w-7xl 2xl:max-w-[1600px] flex-wrap items-center justify-center gap-x-10 gap-y-3 px-5 py-7 sm:justify-between sm:px-8">
           <span className={eyebrow}>As seen in</span>
           {["Vogue Living", "Architectural Digest", "Wallpaper*", "Elle Decor", "Kinfolk"].map((p) => (
             <span key={p} className={`${serif} text-lg italic text-stone-500`}>
@@ -352,7 +352,7 @@ export default function PrismSite() {
       </div>
 
       {/* Collection */}
-      <section id="collection" className="mx-auto max-w-7xl px-5 py-24 sm:px-8 sm:py-36">
+      <section id="collection" className="mx-auto max-w-7xl 2xl:max-w-[1600px] px-5 py-24 sm:px-8 sm:py-36">
         <div className="mb-14 grid gap-6 border-b border-stone-900/10 pb-10 md:grid-cols-[1fr_auto] md:items-end">
           <div>
             <p className={`${eyebrow} mb-4`}>Autumn collection · 2026</p>
@@ -402,7 +402,7 @@ export default function PrismSite() {
 
       {/* Configurator */}
       <section id="configure" className="bg-[#ebe4d8] py-24 sm:py-32">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <div className="mx-auto max-w-7xl 2xl:max-w-[1600px] px-5 sm:px-8">
           <div className="mb-12 grid gap-6 md:grid-cols-[1fr_auto] md:items-end">
             <div className="max-w-3xl">
               <p className={`${eyebrow} mb-4`}>Live configurator</p>
@@ -531,7 +531,7 @@ export default function PrismSite() {
       </section>
 
       {/* Craft */}
-      <section id="craft" className="mx-auto max-w-7xl px-5 py-24 sm:px-8 sm:py-36">
+      <section id="craft" className="mx-auto max-w-7xl 2xl:max-w-[1600px] px-5 py-24 sm:px-8 sm:py-36">
         <div className="grid gap-16 lg:grid-cols-2">
           <div>
             <p className={`${eyebrow} mb-4`}>The atelier</p>
@@ -592,7 +592,7 @@ export default function PrismSite() {
       </section>
 
       {/* CTA */}
-      <section id="contact" className="mx-auto max-w-7xl px-5 py-24 sm:px-8 sm:py-32">
+      <section id="contact" className="mx-auto max-w-7xl 2xl:max-w-[1600px] px-5 py-24 sm:px-8 sm:py-32">
         <div className="relative overflow-hidden rounded-[10px] bg-stone-900 px-6 py-16 text-[#f3eee6] sm:px-16 sm:py-24">
           <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-[conic-gradient(from_0deg,#c4b5fd,#fda4af,#fcd34d,#5eead4,#c4b5fd)] opacity-50 blur-3xl" />
           <div className="relative max-w-xl">
@@ -628,7 +628,7 @@ export default function PrismSite() {
       </section>
 
       {/* Footer */}
-      <footer className="mx-auto flex max-w-7xl flex-col gap-6 px-5 pb-28 pt-4 text-sm text-stone-500 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+      <footer className="mx-auto flex max-w-7xl 2xl:max-w-[1600px] flex-col gap-6 px-5 pb-28 pt-4 text-sm text-stone-500 sm:flex-row sm:items-center sm:justify-between sm:px-8">
         <p className={`${serif} text-2xl text-stone-900`}>
           Prism <span className="italic text-stone-500">Atelier</span>
         </p>

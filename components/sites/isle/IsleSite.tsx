@@ -455,7 +455,7 @@ export default function IsleSite() {
       </section>
 
       {/* ---------------------------------------------------------- STAYS */}
-      <section id="stays" className="mx-auto max-w-6xl px-4 py-20 sm:px-8 sm:py-28">
+      <section id="stays" className="mx-auto max-w-6xl 2xl:max-w-[1600px] px-4 py-20 sm:px-8 sm:py-28">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.25em] text-teal-700">Where you&apos;ll sleep</p>
@@ -504,7 +504,7 @@ export default function IsleSite() {
 
       {/* ---------------------------------------------------- EXPERIENCES */}
       <section id="experiences" className="bg-emerald-950 text-[#f6f1e7]">
-        <div className="mx-auto grid max-w-6xl gap-12 px-4 py-20 sm:px-8 sm:py-28 lg:grid-cols-[1fr_1.4fr]">
+        <div className="mx-auto grid max-w-6xl 2xl:max-w-[1600px] gap-12 px-4 py-20 sm:px-8 sm:py-28 lg:grid-cols-[1fr_1.4fr]">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.25em] text-amber-300">Days on the isle</p>
             <h2 className="mt-3 text-4xl leading-tight font-semibold sm:text-5xl font-(family-name:--font-isle-display)">
@@ -544,7 +544,7 @@ export default function IsleSite() {
       </section>
 
       {/* -------------------------------------------------------- STORIES */}
-      <section id="stories" className="mx-auto max-w-6xl px-4 py-20 sm:px-8 sm:py-28">
+      <section id="stories" className="mx-auto max-w-6xl 2xl:max-w-[1600px] px-4 py-20 sm:px-8 sm:py-28">
         <p className="text-xs font-bold uppercase tracking-[0.25em] text-teal-700">One island, four moods</p>
         <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
           {MOMENTS.map((m) => (
@@ -586,7 +586,7 @@ export default function IsleSite() {
 
       {/* ----------------------------------------------------------- BOOK */}
       <section id="book" className="px-4 pb-20 sm:px-8 sm:pb-28">
-        <div className="mx-auto max-w-6xl overflow-hidden rounded-[2rem] bg-gradient-to-br from-teal-600 via-emerald-700 to-emerald-950 p-6 text-white shadow-2xl sm:p-12">
+        <div className="mx-auto max-w-6xl 2xl:max-w-[1600px] overflow-hidden rounded-[2rem] bg-gradient-to-br from-teal-600 via-emerald-700 to-emerald-950 p-6 text-white shadow-2xl sm:p-12">
           <div className="grid gap-10 lg:grid-cols-[1fr_1.2fr]">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.25em] text-amber-300">Plan your drift</p>
@@ -711,7 +711,7 @@ export default function IsleSite() {
 
       {/* --------------------------------------------------------- FOOTER */}
       <footer className="border-t border-emerald-950/10 px-4 pb-28 pt-12 sm:px-8">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-6">
+        <div className="mx-auto flex max-w-6xl 2xl:max-w-[1600px] flex-wrap items-end justify-between gap-6">
           <div>
             <p className="text-3xl font-semibold italic font-(family-name:--font-isle-display)">
               Isle<span className="text-amber-500">.</span>
@@ -726,7 +726,7 @@ export default function IsleSite() {
             <a href="#book" className="hover:text-emerald-950">Book</a>
           </div>
         </div>
-        <p className="mx-auto mt-10 max-w-6xl text-xs text-emerald-950/45">
+        <p className="mx-auto mt-10 max-w-6xl 2xl:max-w-[1600px] text-xs text-emerald-950/45">
           © Isle Retreats — a MeshUI demo. Fictional place, real Three.js.
         </p>
       </footer>

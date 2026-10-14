@@ -196,7 +196,7 @@ export default function NebulaSite({ fontClassName = "" }: { fontClassName?: str
       <div className="relative z-10">
         {/* Nav */}
         <header className="nebula-fade fixed inset-x-0 top-0 z-50 [animation-delay:1.6s]">
-          <nav className="mx-auto mt-3 flex max-w-6xl items-center justify-between gap-3 rounded-full border border-white/10 bg-black/35 px-4 py-2.5 backdrop-blur-xl max-[1180px]:mx-3 sm:px-5">
+          <nav className="mx-auto mt-3 flex max-w-6xl 2xl:max-w-[1600px] items-center justify-between gap-3 rounded-full border border-white/10 bg-black/35 px-4 py-2.5 backdrop-blur-xl max-[1180px]:mx-3 sm:px-5">
             <a href="#top" className={`${display} flex items-center gap-2 text-sm font-bold tracking-[0.3em] sm:text-base`}>
               <span className="relative grid h-6 w-6 place-items-center">
                 <span className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-200 via-fuchsia-400 to-sky-400 blur-[6px]" />
@@ -229,7 +229,7 @@ export default function NebulaSite({ fontClassName = "" }: { fontClassName?: str
           id="top"
           className="flex min-h-[100svh] items-start px-4 pt-28 sm:px-6 md:items-center md:pt-0"
         >
-          <div className="mx-auto w-full max-w-6xl">
+          <div className="mx-auto w-full max-w-6xl 2xl:max-w-[1600px]">
             <div className="max-w-3xl">
               <p className="nebula-rise mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/40 px-3 py-1 text-[10px] uppercase tracking-[0.3em] text-white/75 backdrop-blur [animation-delay:1.5s] sm:text-[11px]">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-fuchsia-400 shadow-[0_0_10px_2px_rgba(232,121,249,0.8)]" />
@@ -272,7 +272,7 @@ export default function NebulaSite({ fontClassName = "" }: { fontClassName?: str
 
         {/* Destinations — ringed planet fly-by */}
         <section id="destinations" className="flex min-h-[110vh] items-end px-4 pb-24 pt-32 sm:px-6">
-          <div className="mx-auto w-full max-w-6xl">
+          <div className="mx-auto w-full max-w-6xl 2xl:max-w-[1600px]">
             <Eyebrow n="01" tone="text-amber-200/90">Destinations</Eyebrow>
             <h2 className={`${display} mt-4 max-w-xl text-[clamp(2rem,5vw,3.75rem)] font-bold leading-[1.02]`}>
               Three worlds. One unforgettable route.
@@ -301,7 +301,7 @@ export default function NebulaSite({ fontClassName = "" }: { fontClassName?: str
 
         {/* Voyage — nebula crossing */}
         <section id="voyage" className="flex min-h-[110vh] items-center px-4 py-24 sm:px-6">
-          <div className="mx-auto flex w-full max-w-6xl justify-end">
+          <div className="mx-auto flex w-full max-w-6xl 2xl:max-w-[1600px] justify-end">
             <Glass className="w-full max-w-xl p-7 sm:p-10">
               <Eyebrow n="02" tone="text-fuchsia-300/90">The voyage</Eyebrow>
               <h2 className={`${display} mt-4 text-[clamp(1.9rem,4.5vw,3.25rem)] font-bold leading-[1.04]`}>
@@ -327,7 +327,7 @@ export default function NebulaSite({ fontClassName = "" }: { fontClassName?: str
 
         {/* Pricing — deep space, black hole on the horizon */}
         <section id="pricing" className="flex min-h-screen items-end px-4 pb-24 pt-40 sm:px-6 md:pt-56">
-          <div className="mx-auto w-full max-w-6xl">
+          <div className="mx-auto w-full max-w-6xl 2xl:max-w-[1600px]">
             <div className="text-center">
               <div className="flex justify-center">
                 <Eyebrow n="03" tone="text-sky-300/90">Pricing</Eyebrow>
@@ -386,7 +386,7 @@ export default function NebulaSite({ fontClassName = "" }: { fontClassName?: str
 
         {/* Testimonials — approach */}
         <section id="stories" className="flex min-h-screen items-center px-4 py-24 sm:px-6">
-          <div className="mx-auto w-full max-w-6xl">
+          <div className="mx-auto w-full max-w-6xl 2xl:max-w-[1600px]">
             <div className="max-w-xl space-y-5">
               <Eyebrow n="04" tone="text-orange-300/90">Guest log</Eyebrow>
               {quotes.map((q) => (
@@ -454,7 +454,7 @@ export default function NebulaSite({ fontClassName = "" }: { fontClassName?: str
 
         {/* Footer */}
         <footer className="border-t border-white/10 bg-black/60 px-4 pb-24 pt-10 backdrop-blur sm:px-6">
-          <div className="mx-auto flex max-w-6xl flex-col justify-between gap-6 text-sm text-white/50 sm:flex-row">
+          <div className="mx-auto flex max-w-6xl 2xl:max-w-[1600px] flex-col justify-between gap-6 text-sm text-white/50 sm:flex-row">
             <p className={`${display} font-bold tracking-[0.3em] text-white`}>✦ NEBULA</p>
             <p>Departures from Earth Orbital Port 3 · A fictional company built with MeshUI.</p>
           </div>

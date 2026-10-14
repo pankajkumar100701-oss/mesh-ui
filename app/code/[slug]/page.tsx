@@ -40,7 +40,7 @@ export default async function CodePage({ params }: PageProps<"/code/[slug]">) {
   const sources = await loadSources(slug);
 
   return (
-    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6">
+    <main className="mx-auto w-full max-w-6xl xl:max-w-7xl 2xl:max-w-[1600px] flex-1 px-4 py-6 sm:px-6 lg:px-10">
       <nav className="flex flex-wrap items-center justify-between gap-3 text-sm">
         <Link href="/" className="text-white/60 hover:text-white">
           ← MeshUI
