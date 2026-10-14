@@ -9,6 +9,11 @@ A collection of complete 3D websites built with Next.js, Three.js and React Thre
 | Neon Drive | `/sites/neon` | Infinite synthwave terrain, steer and boost |
 | Bounce Candy Co. | `/sites/bounce` | Rapier physics, drag and throw |
 | Isle Retreats | `/sites/isle` | Low-poly island, hotspots, day/night |
+| Abyss Dive Co. | `/sites/abyss` | Scroll descent, bioluminescence, boids |
+| Atlas Freight | `/sites/atlas` | Interactive globe, flight arcs, fly-to hubs |
+| Bloom Botanica | `/sites/bloom` | Procedural flowers, wind, bouquet builder |
+| Pulse Records | `/sites/pulse` | Web Audio synth, audio-reactive stage |
+| Metro Habitat | `/sites/metro` | Tilt-shift city, time of day, clickable towers |
 
 Source for each site is shown at `/code/<slug>`.
 
